@@ -18,7 +18,7 @@ app.use(cors());
 app.use(bodyParser.json());
 
 // MongoDB Connection
-const uri = "mongodb+srv://Ganime_Dewer:jamshedpur_1000@ganimeindustries1000.rkmonvc.mongodb.net/data";
+const uri = "mongodb+srv://username:password@ganimeindustries1000.rkmonvc.mongodb.net/data";
 mongoose.connect(uri, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => console.log("MongoDB connected"))
   .catch(err => console.log(err));
