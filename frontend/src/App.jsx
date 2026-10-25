@@ -5,6 +5,8 @@ import LoginPage from './pages/LoginPage';
 import AdminDashboard from './pages/AdminDashboard';
 import TeacherDashboard from './pages/TeacherDashboard';
 import { Toaster } from './components/ui/sonner';
+import BackendStatusNotice from './components/BackendStatusNotice';
+import './lib/backendRequestMonitor';
 import '@/App.css';
 
 const readStoredSession = () => {
@@ -125,6 +127,7 @@ function App() {
       </BrowserRouter>
       <footer className="app-footer">@KPSKADMA</footer>
       <Toaster position="top-right" richColors />
+      <BackendStatusNotice />
     </div>
   );
 }

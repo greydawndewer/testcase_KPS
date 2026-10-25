@@ -50,6 +50,47 @@ h1, h2, h3, h4, h5, h6 {
   border-color: rgba(148, 163, 184, 0.15);
 }
 
+.backend-status-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(15, 23, 42, 0.58);
+  backdrop-filter: blur(4px);
+}
+
+.backend-status-card {
+  display: flex;
+  width: min(100%, 28rem);
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 2rem;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 1.25rem;
+  background: white;
+  text-align: center;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.25);
+}
+
+.dark .backend-status-card {
+  background: #1e293b;
+}
+
+.backend-status-dismiss {
+  border-radius: 0.5rem;
+  padding: 0.6rem 1rem;
+  background: #1d4ed8;
+  color: white;
+  font-weight: 600;
+}
+
+.backend-status-dismiss:hover {
+  background: #1e40af;
+}
+
 .home-page {
   isolation: isolate;
   min-height: calc(100vh - 3.5rem);

@@ -83,7 +83,7 @@ python-dotenv==1.2.4
     #   uvicorn
 pytokens==0.4.1
     # via black
-
+pyyaml==6.0.3
     # via uvicorn
 starlette==1.10.0
     # via fastapi

@@ -64,7 +64,7 @@ The backend connects to Atlas during startup, so a bad URI or blocked network ac
    Add a custom frontend domain as another comma-separated origin, for example `https://YOUR-VERCEL-DOMAIN,https://YOUR-CUSTOM-DOMAIN`. Do not include paths or a trailing slash. You can update this after Vercel gives you the real domain.
 5. Create the service and wait for a successful deployment. Copy its HTTPS URL, such as `https://your-api-name.onrender.com`. Visit `https://your-api-name.onrender.com/docs`; FastAPI's API docs should load.
 
-**Keeping it available:** Render's Free web services spin down after 15 minutes without traffic and can take about a minute to start again. For an API that stays running without that free-tier sleep behavior, select a paid always-on compute plan and review its current price before confirming. Plans, limits, and prices can change; check Render's billing page before deploying.
+**Keeping it available:** Vercel serves the frontend; the Render API is the part that can sleep. Render Free web services spin down after 15 minutes without traffic and can take about a minute to start again. That can happen after any idle period, even if the app has been deployed for a long time; it is not a one-time Vercel startup delay. Free services are also subject to monthly usage limits and may be suspended if those limits are exhausted, so a free deployment is not a guarantee of uninterrupted availability for a year. For an API that stays running without the free-tier sleep behavior, select a paid always-on compute plan and review its current price before confirming. Plans, limits, and prices can change; check Render's billing page before deploying.
 
 ## 4. Deploy the frontend to Vercel
 
