@@ -687,6 +687,28 @@ body {
   scrollbar-width: thin;
 }
 
+.App input::placeholder,
+.App textarea::placeholder {
+  color: #52525b !important;
+  opacity: 1 !important;
+}
+
+.App [data-placeholder] {
+  color: #52525b !important;
+}
+
+:root:not(.dark) .App button[class*="bg-white"],
+:root:not(.dark) .App button[class*="bg-gray-100"],
+:root:not(.dark) .App button[class*="bg-slate-100"] {
+  color: #18181b;
+}
+
+.dark .App input::placeholder,
+.dark .App textarea::placeholder,
+.dark .App [data-placeholder] {
+  color: #a1a1aa !important;
+}
+
 .dark .editable-choice-menu {
   border-color: rgba(212, 212, 216, 0.2);
   background: rgba(24, 24, 27, 0.97);
@@ -761,7 +783,6 @@ body {
   pointer-events: none;
   width: 240px;
   height: 240px;
-  mix-blend-mode: difference;
   will-change: transform;
 }
 
@@ -849,17 +870,6 @@ a:focus-visible {
   background-color: #27272a !important;
 }
 
-.App [class*="from-blue-"],
-.App [class*="from-purple-"] {
-  --tw-gradient-from: #09090b var(--tw-gradient-from-position) !important;
-  --tw-gradient-to: #3f3f46 var(--tw-gradient-to-position) !important;
-}
-
-.App [class*="to-blue-"],
-.App [class*="to-purple-"] {
-  --tw-gradient-to: #3f3f46 var(--tw-gradient-to-position) !important;
-}
-
 .App [class*="text-blue-"],
 .App [class*="text-orange-"],
 .App [class*="text-green-"],
@@ -884,6 +894,45 @@ a:focus-visible {
 .dark .App [class*="border-orange-"],
 .dark .App [class*="border-yellow-"] {
   border-color: #52525b !important;
+}
+
+.App .app-primary-action {
+  border: 1px solid #a1a1aa !important;
+  background: #f4f4f5 !important;
+  background-image: none !important;
+  color: #18181b !important;
+}
+
+.App .app-primary-action:hover {
+  background: #e4e4e7 !important;
+  color: #18181b !important;
+}
+
+.dark .App .app-primary-action {
+  border-color: #52525b !important;
+  background: #27272a !important;
+  color: #f4f4f5 !important;
+}
+
+.dark .App .app-primary-action:hover {
+  background: #3f3f46 !important;
+  color: #f4f4f5 !important;
+}
+
+.app-accent-surface {
+  background: linear-gradient(135deg, #09090b, #52525b);
+}
+
+.app-brand-heading {
+  color: #52525b;
+}
+
+.dark .app-brand-heading {
+  color: #d4d4d8;
+}
+
+.qr-demo-overlay {
+  background: rgba(24, 24, 27, 0.42);
 }
 
 .schedule-change {

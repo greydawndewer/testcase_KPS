@@ -57,7 +57,7 @@ const HomePage = ({ exhibitionMode, setExhibitionMode, darkMode, setDarkMode, is
         <div className="flex justify-center mb-8">
           <div className="relative">
             <div className="absolute inset-0 bg-blue-500 rounded-full blur-2xl opacity-30 animate-pulse"></div>
-            <div className="relative bg-gradient-to-br from-blue-500 to-blue-600 p-5 sm:p-8 rounded-3xl shadow-2xl">
+            <div className="app-accent-surface relative p-5 sm:p-8 rounded-3xl shadow-2xl">
             <svg className="w-14 h-14 sm:w-20 sm:h-20 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
@@ -70,7 +70,7 @@ const HomePage = ({ exhibitionMode, setExhibitionMode, darkMode, setDarkMode, is
           <h1 className="text-4xl sm:text-6xl lg:text-7xl font-bold text-gray-900 dark:text-white leading-tight">
             School Scheduling
             <br />
-            <span className="bg-gradient-to-r from-blue-600 to-blue-500 bg-clip-text text-transparent">
+            <span className="app-brand-heading">
               Management System
             </span>
           </h1>
@@ -86,7 +86,7 @@ const HomePage = ({ exhibitionMode, setExhibitionMode, darkMode, setDarkMode, is
           <Button
             onClick={handleGetStarted}
             size="lg"
-            className="bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white px-9 sm:px-12 py-6 text-lg rounded-full shadow-xl hover:shadow-2xl"
+            className="app-primary-action px-9 sm:px-12 py-6 text-lg rounded-full shadow-xl hover:shadow-2xl"
             data-testid="login-button"
           >
             {isAuthenticated ? 'Go to Dashboard' : 'Login'}

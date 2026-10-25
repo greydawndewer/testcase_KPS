@@ -17,10 +17,10 @@ const QRCodeModal = ({ open, onClose }) => {
           <div className="bg-white p-8 rounded-xl border-2 border-dashed border-gray-300 flex items-center justify-center">
             <div className="text-center space-y-4">
               <div className="relative inline-block">
-                <div className="w-48 h-48 bg-gradient-to-br from-blue-500 to-purple-500 rounded-xl flex items-center justify-center">
+                <div className="app-accent-surface w-48 h-48 rounded-xl flex items-center justify-center">
                   <QrCode className="w-32 h-32 text-white" />
                 </div>
-                <div className="absolute inset-0 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+                <div className="qr-demo-overlay absolute inset-0 backdrop-blur-sm rounded-xl flex items-center justify-center">
                   <span className="text-white font-bold text-lg">DEMO</span>
                 </div>
               </div>

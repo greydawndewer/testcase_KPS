@@ -1,9 +1,9 @@
 import { useEffect, useRef } from 'react';
 
 const CANVAS_SIZE = 240;
-const MAX_SPARKLES = 24;
-const SPACING = 15;
-const SPARKLE_LIFETIME = 190;
+const MAX_SPARKLES = 32;
+const SPACING = 10;
+const SPARKLE_LIFETIME = 380;
 
 const CursorGlow = () => {
   const canvasRef = useRef(null);
@@ -44,7 +44,8 @@ const CursorGlow = () => {
       context.translate(x, y);
       context.rotate(sparkle.rotation);
       context.globalAlpha = opacity;
-      context.fillStyle = '#ffffff';
+      context.shadowColor = '#ffffff';
+      context.shadowBlur = 5;
       context.beginPath();
       context.moveTo(0, -sparkle.size);
       context.lineTo(sparkle.size * 0.2, -sparkle.size * 0.2);
@@ -55,6 +56,11 @@ const CursorGlow = () => {
       context.lineTo(-sparkle.size, 0);
       context.lineTo(-sparkle.size * 0.2, -sparkle.size * 0.2);
       context.closePath();
+      context.lineJoin = 'round';
+      context.lineWidth = 1.4;
+      context.strokeStyle = '#111113';
+      context.stroke();
+      context.fillStyle = '#ffffff';
       context.fill();
       context.restore();
     };
@@ -105,15 +111,22 @@ const CursorGlow = () => {
         const dy = current.y - previousPointer.y;
         const distance = Math.hypot(dx, dy);
         if (distance > 0) {
-          let distanceToNext = SPACING - spacingRemainder;
-          while (distanceToNext <= distance) {
+          const firstDistance = SPACING - spacingRemainder;
+          const points = Math.min(
+            Math.floor((distance - firstDistance) / SPACING) + 1,
+            MAX_SPARKLES,
+          );
+          const firstVisibleDistance = points === MAX_SPARKLES
+            ? Math.max(firstDistance, distance - SPACING * (points - 1))
+            : firstDistance;
+          for (let index = 0; index < points; index += 1) {
+            const distanceToNext = firstVisibleDistance + index * SPACING;
             const progress = distanceToNext / distance;
             addSparkle(
               previousPointer.x + dx * progress,
               previousPointer.y + dy * progress,
               now,
             );
-            distanceToNext += SPACING;
           }
           spacingRemainder = (spacingRemainder + distance) % SPACING;
         }

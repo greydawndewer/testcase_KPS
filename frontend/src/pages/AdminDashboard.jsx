@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -56,6 +56,20 @@ const AdminDashboard = ({ user, token, onLogout, exhibitionMode, darkMode, setDa
     groups[option.standard].push(option);
     return groups;
   }, {});
+  const subjectOptions = useMemo(() => [...new Set([
+    ...subjectCatalog.map(option => option.name),
+    ...schedules.map(schedule => schedule.subject),
+  ].filter(Boolean))].sort((first, second) => first.localeCompare(second)), [
+    subjectCatalog,
+    schedules,
+  ]);
+  const gradeOptions = useMemo(() => [...new Set([
+    ...gradeCatalog.map(option => option.name),
+    ...schedules.map(schedule => schedule.class_name),
+  ].filter(Boolean))].sort((first, second) => first.localeCompare(second)), [
+    gradeCatalog,
+    schedules,
+  ]);
 
   useEffect(() => {
     fetchData();
@@ -711,10 +725,7 @@ const AdminDashboard = ({ user, token, onLogout, exhibitionMode, darkMode, setDa
                 label="Subject"
                 value={newSchedule.subject}
                 onChange={(subject) => setNewSchedule(current => ({ ...current, subject }))}
-                options={[...new Set([
-                  ...subjectCatalog.map(option => option.name),
-                  newSchedule.subject
-                ].filter(Boolean))].sort()}
+                options={subjectOptions}
                 placeholder="Type or choose a subject"
                 testId="schedule-subject-input"
               />
@@ -725,10 +736,7 @@ const AdminDashboard = ({ user, token, onLogout, exhibitionMode, darkMode, setDa
                 label="Class / Grade"
                 value={newSchedule.className}
                 onChange={(className) => setNewSchedule(current => ({ ...current, className }))}
-                options={[...new Set([
-                  ...gradeCatalog.map(option => option.name),
-                  newSchedule.className
-                ].filter(Boolean))].sort()}
+                options={gradeOptions}
                 placeholder="Type or choose a class or grade"
                 testId="schedule-class-input"
               />
@@ -831,10 +839,7 @@ const AdminDashboard = ({ user, token, onLogout, exhibitionMode, darkMode, setDa
                   label="Subject"
                   value={editScheduleValues.subject}
                   onChange={(subject) => setEditScheduleValues(current => ({ ...current, subject }))}
-                  options={[...new Set([
-                    ...subjectCatalog.map(option => option.name),
-                    editScheduleValues.subject
-                  ].filter(Boolean))].sort()}
+                  options={subjectOptions}
                   placeholder="Type or choose a subject"
                   testId="edit-subject-input"
                 />
@@ -845,10 +850,7 @@ const AdminDashboard = ({ user, token, onLogout, exhibitionMode, darkMode, setDa
                   label="Class / Grade"
                   value={editScheduleValues.className}
                   onChange={(className) => setEditScheduleValues(current => ({ ...current, className }))}
-                  options={[...new Set([
-                    ...gradeCatalog.map(option => option.name),
-                    editScheduleValues.className
-                  ].filter(Boolean))].sort()}
+                  options={gradeOptions}
                   placeholder="Type or choose a class or grade"
                   testId="edit-class-input"
                 />

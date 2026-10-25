@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -15,40 +15,63 @@ const EditableChoiceField = ({
   const generatedId = useId();
   const inputId = id || generatedId;
   const listId = `${inputId}-options`;
+  const blurTimeoutRef = useRef(null);
   const [isOpen, setIsOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
+  const [showAllOptions, setShowAllOptions] = useState(false);
   const normalizedValue = value.trim().toLocaleLowerCase();
-  const filteredOptions = options.filter((option) =>
-    option.toLocaleLowerCase().includes(normalizedValue),
-  );
+  const filteredOptions = showAllOptions
+    ? options
+    : options.filter((option) =>
+      option.toLocaleLowerCase().includes(normalizedValue),
+    );
   const visibleOptions = filteredOptions;
+  const keyboardOptions = isOpen && !showAllOptions ? visibleOptions : options;
+
+  useEffect(() => () => {
+    if (blurTimeoutRef.current !== null) {
+      window.clearTimeout(blurTimeoutRef.current);
+    }
+  }, []);
+
+  const cancelPendingBlur = () => {
+    if (blurTimeoutRef.current !== null) {
+      window.clearTimeout(blurTimeoutRef.current);
+      blurTimeoutRef.current = null;
+    }
+  };
 
   const chooseOption = (option) => {
+    cancelPendingBlur();
     onChange(option);
     setIsOpen(false);
     setActiveIndex(-1);
+    setShowAllOptions(false);
   };
 
   const handleKeyDown = (event) => {
     if (event.key === 'Escape') {
       setIsOpen(false);
       setActiveIndex(-1);
+      setShowAllOptions(false);
       return;
     }
 
-    if (event.key === 'ArrowDown' && visibleOptions.length > 0) {
+    if (event.key === 'ArrowDown' && keyboardOptions.length > 0) {
       event.preventDefault();
+      if (!isOpen) setShowAllOptions(true);
       setIsOpen(true);
-      setActiveIndex((current) => (current + 1) % visibleOptions.length);
-    } else if (event.key === 'ArrowUp' && visibleOptions.length > 0) {
+      setActiveIndex((current) => (current + 1) % keyboardOptions.length);
+    } else if (event.key === 'ArrowUp' && keyboardOptions.length > 0) {
       event.preventDefault();
+      if (!isOpen) setShowAllOptions(true);
       setIsOpen(true);
       setActiveIndex((current) =>
-        current <= 0 ? visibleOptions.length - 1 : current - 1,
+        current <= 0 ? keyboardOptions.length - 1 : current - 1,
       );
     } else if (event.key === 'Enter' && isOpen && activeIndex >= 0) {
       event.preventDefault();
-      chooseOption(visibleOptions[activeIndex]);
+      chooseOption(keyboardOptions[activeIndex]);
     }
   };
 
@@ -60,13 +83,29 @@ const EditableChoiceField = ({
           id={inputId}
           value={value}
           onChange={(event) => {
+            cancelPendingBlur();
             onChange(event.target.value);
             setIsOpen(true);
             setActiveIndex(-1);
+            setShowAllOptions(false);
           }}
-          onClick={() => setIsOpen(true)}
-          onBlur={() => {
-            window.setTimeout(() => setIsOpen(false), 120);
+          onClick={() => {
+            cancelPendingBlur();
+            setIsOpen(true);
+            setShowAllOptions(true);
+            setActiveIndex(-1);
+          }}
+          onBlur={(event) => {
+            if (event.currentTarget.parentElement?.contains(event.relatedTarget)) {
+              return;
+            }
+            cancelPendingBlur();
+            blurTimeoutRef.current = window.setTimeout(() => {
+              setIsOpen(false);
+              setActiveIndex(-1);
+              setShowAllOptions(false);
+              blurTimeoutRef.current = null;
+            }, 250);
           }}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
@@ -87,7 +126,14 @@ const EditableChoiceField = ({
           aria-label={`Show ${label.toLowerCase()} suggestions`}
           aria-expanded={isOpen}
           onMouseDown={(event) => event.preventDefault()}
-          onClick={() => setIsOpen((open) => !open)}
+          onClick={() => {
+            cancelPendingBlur();
+            const opening = !isOpen;
+            setIsOpen(opening);
+            setShowAllOptions(opening);
+            setActiveIndex(-1);
+          }}
+          onPointerDown={(event) => event.stopPropagation()}
         >
           <ChevronDown className="h-4 w-4" aria-hidden="true" />
         </button>

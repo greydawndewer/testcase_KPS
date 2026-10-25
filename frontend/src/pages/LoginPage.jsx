@@ -53,7 +53,6 @@ const LoginPage = ({ onLogin, darkMode }) => {
 
       toast.success(`Welcome back, ${user.name}!`);
 
-      // Navigate based on role
       if (user.role === 'admin') {
         navigate('/admin');
       } else {
@@ -77,11 +76,10 @@ const LoginPage = ({ onLogin, darkMode }) => {
 
   return (
     <div className="login-page page-transition flex items-center justify-center relative overflow-hidden">
-      {/* Background decorative elements */}
       <div className="absolute top-0 left-0 w-96 h-96 bg-blue-200 dark:bg-blue-900 rounded-full filter blur-3xl opacity-20 -translate-x-1/2 -translate-y-1/2"></div>
       <div className="absolute bottom-0 right-0 w-96 h-96 bg-purple-200 dark:bg-purple-900 rounded-full filter blur-3xl opacity-20 translate-x-1/2 translate-y-1/2"></div>
 
-      {/* Back button */}
+      
       <Button
         onClick={() => navigate('/')}
         variant="ghost"
@@ -92,10 +90,8 @@ const LoginPage = ({ onLogin, darkMode }) => {
         Back
       </Button>
 
-      {/* Login card */}
       <div className="relative z-10 w-full max-w-md">
         <div className="login-card glass p-5 sm:p-8 rounded-3xl shadow-2xl space-y-6">
-          {/* Header */}
           <div className="text-center space-y-2">
             <div className="flex justify-center mb-4">
               <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-4 rounded-2xl">
@@ -106,7 +102,6 @@ const LoginPage = ({ onLogin, darkMode }) => {
             <p className="text-sm text-gray-600 dark:text-gray-400">Sign in to access your dashboard</p>
           </div>
 
-          {/* Login form */}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="username" className="text-gray-700 dark:text-gray-300">Username</Label>
