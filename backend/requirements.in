@@ -1,0 +1,11 @@
+black
+bcrypt
+fastapi
+flake8
+isort
+mypy
+pymongo
+pytest
+python-dotenv
+pyjwt
+uvicorn[standard]
