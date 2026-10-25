@@ -1,0 +1,48 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "SSMS: Start Backend",
+      "type": "process",
+      "command": "${workspaceFolder}\\backend\\.venv\\Scripts\\python.exe",
+      "args": [
+        "-u",
+        "-m",
+        "uvicorn",
+        "server:app",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "8000",
+        "--lifespan",
+        "on",
+        "--log-level",
+        "info"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}\\backend"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": false
+      }
+    },
+    {
+      "label": "SSMS: Start Frontend",
+      "type": "process",
+      "command": "npm.cmd",
+      "args": ["start", "--", "--host", "127.0.0.1"],
+      "options": {
+        "cwd": "${workspaceFolder}\\frontend"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": false
+      }
+    }
+  ]
+}
