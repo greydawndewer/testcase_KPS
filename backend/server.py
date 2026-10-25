@@ -141,36 +141,31 @@ class ScheduleUpdate(BaseModel):
     teacher_name: Optional[str] = None
 
 
-DEFAULT_SUBJECT_OPTIONS = [
-    "Algebra",
-    "Calculus",
-    "Chemistry",
-    "Creative Writing",
-    "Drama",
-    "Economics",
-    "English",
-    "English Literature",
-    "Geography",
-    "Geometry",
-    "History",
-    "Lab Session",
-    "Mathematics",
-    "Physics",
-    "Science",
-    "Social Studies",
-    "Statistics",
-    "World History",
+LEGACY_SEEDED_SUBJECT_IDS = [
+    "algebra",
+    "calculus",
+    "chemistry",
+    "creative-writing",
+    "drama",
+    "economics",
+    "english",
+    "english-literature",
+    "geography",
+    "geometry",
+    "history",
+    "lab-session",
+    "mathematics",
+    "physics",
+    "science",
+    "social-studies",
+    "statistics",
+    "world-history",
 ]
 
-DEFAULT_GRADE_OPTIONS = [
-    ("Grade 9", "A"),
-    ("Grade 9", "B"),
-    ("Grade 10", "A"),
-    ("Grade 10", "B"),
-    ("Grade 11", "A"),
-    ("Grade 11", "B"),
-    ("Grade 12", "A"),
-    ("Grade 12", "B"),
+LEGACY_SEEDED_GRADE_IDS = [
+    f"grade-{standard}--{section}"
+    for standard in range(9, 13)
+    for section in ("a", "b")
 ]
 
 
@@ -235,23 +230,13 @@ async def _save_schedule_catalog_values(
 
 
 async def _initialize_schedule_catalog():
-    migration = await db.catalog_metadata.find_one({"id": "schedule_catalog_v1"})
+    migration = await db.catalog_metadata.find_one({"id": "schedule_catalog_v2"})
     if migration:
         return
 
-    for subject in DEFAULT_SUBJECT_OPTIONS:
-        await _save_subject_option(subject)
-    for standard, section in DEFAULT_GRADE_OPTIONS:
-        await _save_grade_option(standard, section)
-
-    existing_schedules = await db.schedules.find(
-        {}, {"_id": 0, "subject": 1, "class_name": 1}
-    ).to_list(10000)
-    for schedule in existing_schedules:
-        await _save_schedule_catalog_values(
-            schedule.get("subject", ""), schedule.get("class_name", "")
-        )
-    await db.catalog_metadata.insert_one({"id": "schedule_catalog_v1"})
+    await db.catalog_subjects.delete_many({"id": {"$in": LEGACY_SEEDED_SUBJECT_IDS}})
+    await db.catalog_grades.delete_many({"id": {"$in": LEGACY_SEEDED_GRADE_IDS}})
+    await db.catalog_metadata.insert_one({"id": "schedule_catalog_v2"})
 
 
 class Settings(BaseModel):
@@ -397,12 +382,6 @@ async def init_demo_data():
         settings_doc["updated_at"] = settings_doc["updated_at"].isoformat()
         await db.settings.insert_one(settings_doc)
         logger.info("Settings initialized")
-
-    # Load demo schedules if none exist
-    schedule_count = await db.schedules.count_documents({})
-    if schedule_count == 0:
-        await load_demo_schedules()
-        logger.info("Demo schedules loaded")
 
     await _initialize_schedule_catalog()
 

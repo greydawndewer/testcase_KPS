@@ -110,9 +110,9 @@ MONGO_URL=mongodb+srv://<db-user>:<url-encoded-password>@<cluster-host>/school_s
 ```
 URL-encode special characters in the database username or password. Never put this connection string in the frontend environment. Replace the example JWT key before deployment.
 
-You do **not** need to create a schema or collections in Atlas by hand. On its first successful connection, the backend creates the demo users and settings; MongoDB creates the database and collections when the backend writes those records. It creates demo schedules if the schedules collection is empty.
+You do **not** need to create a schema or collections in Atlas by hand. On its first successful connection, the backend creates the demo users and settings; MongoDB creates the database and collections when the backend writes those records. The timetable starts empty unless schedules already exist or an administrator explicitly loads demo schedules.
 
-The first backend startup also seeds the subject and grade-section catalog in MongoDB from the demo timetable. Admins can add or remove subjects and grade/section combinations in the dashboard's **Settings** tab; those options are then shared by both schedule creation and editing.
+The subject and grade-section catalogs start empty and are managed in MongoDB from the dashboard's **Settings** tab. Add the subjects and grade/section combinations your school uses; those saved catalog entries are the suggestions shared by schedule creation and editing. Existing timetable values do not become catalog suggestions unless they are added to the catalog.
 
 5. MAINNN **Start the backend server:**
 ```bash

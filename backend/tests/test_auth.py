@@ -159,23 +159,12 @@ def test_schedule_values_are_saved_as_subject_and_grade_options():
     )
 
 
-def test_catalog_migration_seeds_defaults_and_runs_once():
-    subjects = SimpleNamespace(update_one=AsyncMock())
-    grades = SimpleNamespace(update_one=AsyncMock())
+def test_catalog_migration_removes_legacy_fixtures_once():
+    subjects = SimpleNamespace(delete_many=AsyncMock())
+    grades = SimpleNamespace(delete_many=AsyncMock())
     metadata = SimpleNamespace(
-        find_one=AsyncMock(side_effect=[None, {"id": "schedule_catalog_v1"}]),
+        find_one=AsyncMock(side_effect=[None, {"id": "schedule_catalog_v2"}]),
         insert_one=AsyncMock(),
-    )
-    schedules = SimpleNamespace(
-        find=Mock(
-            return_value=SimpleNamespace(
-                to_list=AsyncMock(
-                    return_value=[
-                        {"subject": "Biology", "class_name": "Grade 9C"},
-                    ]
-                )
-            )
-        )
     )
 
     with patch.object(
@@ -185,15 +174,18 @@ def test_catalog_migration_seeds_defaults_and_runs_once():
             catalog_subjects=subjects,
             catalog_grades=grades,
             catalog_metadata=metadata,
-            schedules=schedules,
         ),
     ):
         asyncio.run(server._initialize_schedule_catalog())
         asyncio.run(server._initialize_schedule_catalog())
 
-    assert subjects.update_one.await_count == len(server.DEFAULT_SUBJECT_OPTIONS) + 1
-    assert grades.update_one.await_count == len(server.DEFAULT_GRADE_OPTIONS) + 1
-    metadata.insert_one.assert_awaited_once_with({"id": "schedule_catalog_v1"})
+    subjects.delete_many.assert_awaited_once_with(
+        {"id": {"$in": server.LEGACY_SEEDED_SUBJECT_IDS}}
+    )
+    grades.delete_many.assert_awaited_once_with(
+        {"id": {"$in": server.LEGACY_SEEDED_GRADE_IDS}}
+    )
+    metadata.insert_one.assert_awaited_once_with({"id": "schedule_catalog_v2"})
 
 
 def test_teacher_cannot_manage_schedule_catalog():

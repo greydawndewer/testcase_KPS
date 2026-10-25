@@ -56,20 +56,14 @@ const AdminDashboard = ({ user, token, onLogout, exhibitionMode, darkMode, setDa
     groups[option.standard].push(option);
     return groups;
   }, {});
-  const subjectOptions = useMemo(() => [...new Set([
-    ...subjectCatalog.map(option => option.name),
-    ...schedules.map(schedule => schedule.subject),
-  ].filter(Boolean))].sort((first, second) => first.localeCompare(second)), [
-    subjectCatalog,
-    schedules,
-  ]);
-  const gradeOptions = useMemo(() => [...new Set([
-    ...gradeCatalog.map(option => option.name),
-    ...schedules.map(schedule => schedule.class_name),
-  ].filter(Boolean))].sort((first, second) => first.localeCompare(second)), [
-    gradeCatalog,
-    schedules,
-  ]);
+  const subjectOptions = useMemo(
+    () => subjectCatalog.map(option => option.name),
+    [subjectCatalog],
+  );
+  const gradeOptions = useMemo(
+    () => gradeCatalog.map(option => option.name),
+    [gradeCatalog],
+  );
 
   useEffect(() => {
     fetchData();
@@ -77,7 +71,7 @@ const AdminDashboard = ({ user, token, onLogout, exhibitionMode, darkMode, setDa
 
   const fetchData = async () => {
     try {
-      const [teachersRes, schedulesRes, settingsRes, catalogRes] = await Promise.all([
+      const [teachersResult, schedulesResult, settingsResult, catalogResult] = await Promise.allSettled([
         axios.get(`${API}/users`, {
           headers: { Authorization: `Bearer ${token}` }
         }),
@@ -90,11 +84,30 @@ const AdminDashboard = ({ user, token, onLogout, exhibitionMode, darkMode, setDa
         })
       ]);
 
-      setTeachers(teachersRes.data.filter(u => u.role === 'teacher'));
-      setSchedules(schedulesRes.data);
-      setBreakAfter(settingsRes.data.break_after_period);
-      setSubjectCatalog(catalogRes.data.subjects);
-      setGradeCatalog(catalogRes.data.grades);
+      if (teachersResult.status === 'fulfilled') {
+        setTeachers(teachersResult.value.data.filter(u => u.role === 'teacher'));
+      } else {
+        toast.error('Failed to load teachers');
+      }
+      if (schedulesResult.status === 'fulfilled') {
+        setSchedules(schedulesResult.value.data);
+      } else {
+        toast.error('Failed to load schedules');
+      }
+      if (settingsResult.status === 'fulfilled') {
+        setBreakAfter(settingsResult.value.data.break_after_period);
+      } else {
+        toast.error('Failed to load break-period settings');
+      }
+      if (catalogResult.status === 'fulfilled') {
+        setSubjectCatalog(catalogResult.value.data.subjects);
+        setGradeCatalog(catalogResult.value.data.grades);
+      } else {
+        toast.error(
+          catalogResult.reason?.response?.data?.detail
+            || 'Failed to load the subject and grade catalog',
+        );
+      }
     } catch (error) {
       toast.error('Failed to load data');
     } finally {
