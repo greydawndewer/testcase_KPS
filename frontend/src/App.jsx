@@ -129,7 +129,7 @@ function App() {
           </Suspense>
         </main>
       </BrowserRouter>
-      <footer className="app-footer">@KPSKADMA</footer>
+      <footer className="app-footer">@GD</footer>
       <Toaster position="top-right" richColors />
       <BackendStatusNotice />
       <CursorGlow />

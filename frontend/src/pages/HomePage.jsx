@@ -131,12 +131,12 @@ const HomePage = ({ exhibitionMode, setExhibitionMode, darkMode, setDarkMode, is
           <p className="text-sm text-gray-500 dark:text-gray-500 flex items-center justify-center gap-2">
             <span>Created by</span>
             <a
-              href="https://bento.me/buffer"
+              href=""
               target="_blank"
               rel="noopener noreferrer"
               className="font-semibold text-blue-600 dark:text-blue-400 hover:underline"
             >
-              Yuvraj
+              GD
             </a>
           </p>
         </div>
