@@ -15,7 +15,7 @@ const HomePage = ({ exhibitionMode, setExhibitionMode, darkMode, setDarkMode, is
   };
 
   return (
-    <div className="home-page flex flex-col items-center justify-center px-4 sm:px-6 relative overflow-hidden">
+    <div className="home-page page-transition flex flex-col items-center justify-center px-4 sm:px-6 relative overflow-hidden">
       {/* Background decorative elements */}
       <div className="absolute top-0 left-0 w-96 h-96 bg-blue-200 dark:bg-blue-900 rounded-full filter blur-3xl opacity-20 -translate-x-1/2 -translate-y-1/2"></div>
       <div className="absolute bottom-0 right-0 w-96 h-96 bg-purple-200 dark:bg-purple-900 rounded-full filter blur-3xl opacity-20 translate-x-1/2 translate-y-1/2"></div>

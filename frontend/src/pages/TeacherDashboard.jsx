@@ -70,7 +70,7 @@ const TeacherDashboard = ({ user, token, onLogout, exhibitionMode, darkMode, set
   }
 
   return (
-    <div className="dashboard-page">
+    <div className="dashboard-page page-transition">
       {exhibitionMode && (
         <div className="exhibition-badge">Exhibition Mode Active</div>
       )}

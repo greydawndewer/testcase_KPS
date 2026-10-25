@@ -36,7 +36,7 @@ const TimetableGrid = ({ schedules, breakAfter, onCellClick, onEmptyCellClick, i
   return (
     <div className="timetable-scroll overflow-x-auto">
       <div
-        className="timetable-grid min-w-[800px]"
+        className="timetable-grid grid-transition min-w-[800px]"
         style={{
           gridTemplateColumns: `120px repeat(${periods.length}, minmax(0, 1fr))`
         }}

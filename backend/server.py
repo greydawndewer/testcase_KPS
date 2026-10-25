@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
@@ -86,6 +87,32 @@ class TokenResponse(BaseModel):
     user: User
 
 
+class DemoTeacherAccount(BaseModel):
+    name: str
+    username: str
+
+
+class SubjectOption(BaseModel):
+    id: str
+    name: str
+
+
+class SubjectOptionCreate(BaseModel):
+    name: str
+
+
+class GradeOption(BaseModel):
+    id: str
+    standard: str
+    section: str
+    name: str
+
+
+class GradeOptionCreate(BaseModel):
+    standard: str
+    section: str
+
+
 class ScheduleEntry(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -110,6 +137,121 @@ class ScheduleCreate(BaseModel):
 class ScheduleUpdate(BaseModel):
     subject: Optional[str] = None
     class_name: Optional[str] = None
+    teacher_id: Optional[str] = None
+    teacher_name: Optional[str] = None
+
+
+DEFAULT_SUBJECT_OPTIONS = [
+    "Algebra",
+    "Calculus",
+    "Chemistry",
+    "Creative Writing",
+    "Drama",
+    "Economics",
+    "English",
+    "English Literature",
+    "Geography",
+    "Geometry",
+    "History",
+    "Lab Session",
+    "Mathematics",
+    "Physics",
+    "Science",
+    "Social Studies",
+    "Statistics",
+    "World History",
+]
+
+DEFAULT_GRADE_OPTIONS = [
+    ("Grade 9", "A"),
+    ("Grade 9", "B"),
+    ("Grade 10", "A"),
+    ("Grade 10", "B"),
+    ("Grade 11", "A"),
+    ("Grade 11", "B"),
+    ("Grade 12", "A"),
+    ("Grade 12", "B"),
+]
+
+
+def _catalog_id(value: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "-", value.casefold()).strip("-")
+
+
+def _grade_name(standard: str, section: str) -> str:
+    if section == "General":
+        return standard
+    if re.fullmatch(r"Grade\s*\d+", standard, re.IGNORECASE):
+        return f"{standard}{section}"
+    return f"{standard}-{section}"
+
+
+async def _save_subject_option(name: str) -> dict:
+    normalized_name = name.strip()
+    option_id = _catalog_id(normalized_name)
+    option = {"id": option_id, "name": normalized_name}
+    await db.catalog_subjects.update_one(
+        {"id": option_id}, {"$set": option}, upsert=True
+    )
+    return option
+
+
+async def _save_grade_option(standard: str, section: str) -> dict:
+    normalized_standard = standard.strip()
+    normalized_section = section.strip()
+    option_id = f"{_catalog_id(normalized_standard)}--{_catalog_id(normalized_section)}"
+    option = {
+        "id": option_id,
+        "standard": normalized_standard,
+        "section": normalized_section,
+        "name": _grade_name(normalized_standard, normalized_section),
+    }
+    await db.catalog_grades.update_one({"id": option_id}, {"$set": option}, upsert=True)
+    return option
+
+
+async def _save_schedule_catalog_values(
+    subject: Optional[str] = None, class_name: Optional[str] = None
+):
+    if subject is not None and subject.strip():
+        await _save_subject_option(subject)
+
+    if class_name is not None and class_name.strip():
+        grade_match = re.fullmatch(
+            r"(Grade\s*\d+)\s*[- ]?\s*([A-Za-z])",
+            class_name.strip(),
+            re.IGNORECASE,
+        )
+        if not grade_match:
+            grade_match = re.fullmatch(
+                r"((?:Standard\s*)?[IVXLCDM]+)\s*[- ]\s*([A-Za-z])",
+                class_name.strip(),
+                re.IGNORECASE,
+            )
+        if grade_match:
+            await _save_grade_option(grade_match.group(1), grade_match.group(2).upper())
+        else:
+            await _save_grade_option(class_name.strip(), "General")
+
+
+async def _initialize_schedule_catalog():
+    migration = await db.catalog_metadata.find_one({"id": "schedule_catalog_v1"})
+    if migration:
+        return
+
+    for subject in DEFAULT_SUBJECT_OPTIONS:
+        await _save_subject_option(subject)
+    for standard, section in DEFAULT_GRADE_OPTIONS:
+        await _save_grade_option(standard, section)
+
+    existing_schedules = await db.schedules.find(
+        {}, {"_id": 0, "subject": 1, "class_name": 1}
+    ).to_list(10000)
+    for schedule in existing_schedules:
+        await _save_schedule_catalog_values(
+            schedule.get("subject", ""), schedule.get("class_name", "")
+        )
+    await db.catalog_metadata.insert_one({"id": "schedule_catalog_v1"})
 
 
 class Settings(BaseModel):
@@ -200,10 +342,30 @@ async def init_demo_data():
 
     # Create demo teachers
     demo_teachers = [
-        {"username": "t_admin", "name": "Admin", "password": "pass123"},
-        {"username": "t_nadeem", "name": "Nadeem Sir", "password": "pass123"},
-        {"username": "t_prinshu", "name": "Prinshu Sir", "password": "pass123"},
-        {"username": "t_abhishek", "name": "Abhishek Sir", "password": "pass123"},
+        {
+            "username": "t_admin",
+            "name": "Admin",
+            "password": "pass123",
+            "show_on_login": False,
+        },
+        {
+            "username": "t_nadeem",
+            "name": "Nadeem Sir",
+            "password": "pass123",
+            "show_on_login": True,
+        },
+        {
+            "username": "t_prinshu",
+            "name": "Prinshu Sir",
+            "password": "pass123",
+            "show_on_login": True,
+        },
+        {
+            "username": "t_abhishek",
+            "name": "Abhishek Sir",
+            "password": "pass123",
+            "show_on_login": True,
+        },
     ]
 
     teacher_ids = {}
@@ -216,10 +378,15 @@ async def init_demo_data():
             user_doc = user.model_dump()
             user_doc["created_at"] = user_doc["created_at"].isoformat()
             user_doc["password_hash"] = hash_password(teacher["password"])
+            user_doc["is_demo_teacher"] = teacher["show_on_login"]
             await db.users.insert_one(user_doc)
             teacher_ids[teacher["username"]] = user.id
             logger.info(f"Teacher {teacher['name']} created")
         else:
+            await db.users.update_one(
+                {"id": exists["id"]},
+                {"$set": {"is_demo_teacher": teacher["show_on_login"]}},
+            )
             teacher_ids[teacher["username"]] = exists["id"]
 
     # Initialize settings
@@ -236,6 +403,8 @@ async def init_demo_data():
     if schedule_count == 0:
         await load_demo_schedules()
         logger.info("Demo schedules loaded")
+
+    await _initialize_schedule_catalog()
 
 
 async def load_demo_schedules():
@@ -777,6 +946,16 @@ async def login(credentials: UserLogin):
     return TokenResponse(token=token, user=user)
 
 
+@api_router.get("/auth/demo-teachers", response_model=List[DemoTeacherAccount])
+async def get_demo_teachers():
+    """Return the public demo teacher names and usernames, never credentials."""
+    teachers = await db.users.find(
+        {"role": "teacher", "is_demo_teacher": True},
+        {"_id": 0, "name": 1, "username": 1},
+    ).to_list(20)
+    return teachers
+
+
 @api_router.get("/auth/verify")
 async def verify_token(current_user: User = Depends(get_current_user)):
     return {"valid": True, "user": current_user}
@@ -837,6 +1016,77 @@ async def delete_user(user_id: str, current_user: User = Depends(get_current_use
 # ============ Schedule Routes ============
 
 
+@api_router.get("/catalog")
+async def get_schedule_catalog(current_user: User = Depends(get_current_user)):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    subjects = await db.catalog_subjects.find({}, {"_id": 0}).to_list(1000)
+    grades = await db.catalog_grades.find({}, {"_id": 0}).to_list(1000)
+    return {
+        "subjects": sorted(subjects, key=lambda option: option["name"].casefold()),
+        "grades": sorted(
+            grades,
+            key=lambda option: (
+                option["standard"].casefold(),
+                option["section"].casefold(),
+            ),
+        ),
+    }
+
+
+@api_router.post("/catalog/subjects", response_model=SubjectOption)
+async def create_subject_option(
+    option_data: SubjectOptionCreate,
+    current_user: User = Depends(get_current_user),
+):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    if not option_data.name.strip():
+        raise HTTPException(status_code=400, detail="Subject name cannot be empty")
+
+    return await _save_subject_option(option_data.name)
+
+
+@api_router.delete("/catalog/subjects/{option_id}")
+async def delete_subject_option(
+    option_id: str, current_user: User = Depends(get_current_user)
+):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    result = await db.catalog_subjects.delete_one({"id": option_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Subject not found")
+    return {"message": "Subject removed from the catalog"}
+
+
+@api_router.post("/catalog/grades", response_model=GradeOption)
+async def create_grade_option(
+    option_data: GradeOptionCreate,
+    current_user: User = Depends(get_current_user),
+):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    if not option_data.standard.strip() or not option_data.section.strip():
+        raise HTTPException(
+            status_code=400, detail="Standard and section cannot be empty"
+        )
+
+    return await _save_grade_option(option_data.standard, option_data.section)
+
+
+@api_router.delete("/catalog/grades/{option_id}")
+async def delete_grade_option(
+    option_id: str, current_user: User = Depends(get_current_user)
+):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    result = await db.catalog_grades.delete_one({"id": option_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Grade not found")
+    return {"message": "Grade removed from the catalog"}
+
+
 @api_router.get("/schedules", response_model=List[ScheduleEntry])
 async def get_schedules(
     teacher_id: Optional[str] = None, current_user: User = Depends(get_current_user)
@@ -874,7 +1124,7 @@ async def create_schedule(
     if conflict:
         raise HTTPException(
             status_code=400,
-            detail="Schedule conflict: This class already has a lesson at this time",
+            detail=("Schedule conflict: This class already has a lesson at this time"),
         )
 
     schedule = ScheduleEntry(**schedule_data.model_dump())
@@ -882,6 +1132,7 @@ async def create_schedule(
     schedule_doc["updated_at"] = schedule_doc["updated_at"].isoformat()
 
     await db.schedules.insert_one(schedule_doc)
+    await _save_schedule_catalog_values(schedule_data.subject, schedule_data.class_name)
     return schedule
 
 
@@ -898,38 +1149,89 @@ async def update_schedule(
     if not existing:
         raise HTTPException(status_code=404, detail="Schedule not found")
 
+    update_dict = {
+        key: value
+        for key, value in update_data.model_dump(exclude_unset=True).items()
+        if value is not None
+    }
+
+    if "teacher_id" in update_dict:
+        teacher_doc = await db.users.find_one(
+            {"id": update_dict["teacher_id"], "role": "teacher"}, {"_id": 0}
+        )
+        if not teacher_doc:
+            raise HTTPException(status_code=404, detail="Teacher not found")
+        update_dict["teacher_name"] = teacher_doc["name"]
+    elif "teacher_name" in update_dict:
+        update_dict.pop("teacher_name")
+
+    new_class_name = update_dict.get("class_name", existing.get("class_name"))
+    if new_class_name != existing.get("class_name"):
+        conflict = await db.schedules.find_one(
+            {
+                "day": existing["day"],
+                "period": existing["period"],
+                "class_name": new_class_name,
+                "id": {"$ne": schedule_id},
+            }
+        )
+        if conflict:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "Schedule conflict: This class already has a lesson " "at this time"
+                ),
+            )
+
     # Log the change
     changes = []
-    if update_data.subject and update_data.subject != existing.get("subject"):
-        changes.append(f"Subject: {existing.get('subject')} → {update_data.subject}")
-    if update_data.class_name and update_data.class_name != existing.get("class_name"):
+    if "subject" in update_dict and update_dict["subject"] != existing.get("subject"):
+        changes.append(f"Subject: {existing.get('subject')} → {update_dict['subject']}")
+    if "class_name" in update_dict and update_dict["class_name"] != existing.get(
+        "class_name"
+    ):
         changes.append(
-            f"Class: {existing.get('class_name')} → {update_data.class_name}"
+            f"Class: {existing.get('class_name')} → {update_dict['class_name']}"
+        )
+    if "teacher_id" in update_dict and update_dict["teacher_id"] != existing.get(
+        "teacher_id"
+    ):
+        changes.append(
+            f"Teacher: {existing.get('teacher_name')} → {update_dict['teacher_name']}"
         )
 
     if changes:
+        new_teacher_id = update_dict.get("teacher_id", existing["teacher_id"])
+        new_teacher_name = update_dict.get("teacher_name", existing["teacher_name"])
         changelog = ChangeLog(
             schedule_id=schedule_id,
-            teacher_id=existing["teacher_id"],
-            teacher_name=existing["teacher_name"],
+            teacher_id=new_teacher_id,
+            teacher_name=new_teacher_name,
             day=existing["day"],
             period=existing["period"],
             old_value=existing.get("subject", "")
             + " - "
-            + existing.get("class_name", ""),
-            new_value=(update_data.subject or existing.get("subject", ""))
+            + existing.get("class_name", "")
             + " - "
-            + (update_data.class_name or existing.get("class_name", "")),
+            + existing.get("teacher_name", ""),
+            new_value=update_dict.get("subject", existing.get("subject", ""))
+            + " - "
+            + update_dict.get("class_name", existing.get("class_name", ""))
+            + " - "
+            + new_teacher_name,
             changed_by=current_user.name,
         )
         changelog_doc = changelog.model_dump()
         changelog_doc["timestamp"] = changelog_doc["timestamp"].isoformat()
         await db.changelogs.insert_one(changelog_doc)
 
-    update_dict = {k: v for k, v in update_data.model_dump().items() if v is not None}
-    update_dict["updated_at"] = datetime.now(timezone.utc).isoformat()
-
-    await db.schedules.update_one({"id": schedule_id}, {"$set": update_dict})
+    if update_dict:
+        update_dict["updated_at"] = datetime.now(timezone.utc).isoformat()
+        await db.schedules.update_one({"id": schedule_id}, {"$set": update_dict})
+        await _save_schedule_catalog_values(
+            subject=update_dict.get("subject"),
+            class_name=update_dict.get("class_name"),
+        )
 
     updated = await db.schedules.find_one({"id": schedule_id}, {"_id": 0})
     if updated is None:

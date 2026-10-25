@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { LogOut, Moon, Sun, Users, Calendar, Settings as SettingsIcon, Plus, Trash2, QrCode } from 'lucide-react';
 import TimetableGrid from '../components/TimetableGrid';
 import QRCodeModal from '../components/QRCodeModal';
+import EditableChoiceField from '../components/EditableChoiceField';
 
 const BACKEND_URL =
   import.meta.env.REACT_APP_BACKEND_URL || "http://127.0.0.1:8000";
@@ -21,11 +22,22 @@ const AdminDashboard = ({ user, token, onLogout, exhibitionMode, darkMode, setDa
   const [breakAfter, setBreakAfter] = useState(3);
   const [loading, setLoading] = useState(true);
   const [showAddTeacher, setShowAddTeacher] = useState(false);
+  const [showSubjectCatalog, setShowSubjectCatalog] = useState(false);
+  const [showGradeCatalog, setShowGradeCatalog] = useState(false);
   const [showAddSchedule, setShowAddSchedule] = useState(false);
   const [showEditSchedule, setShowEditSchedule] = useState(false);
   const [showQRModal, setShowQRModal] = useState(false);
   const [selectedTeacher, setSelectedTeacher] = useState(null);
   const [selectedSchedule, setSelectedSchedule] = useState(null);
+  const [subjectCatalog, setSubjectCatalog] = useState([]);
+  const [gradeCatalog, setGradeCatalog] = useState([]);
+  const [subjectDraft, setSubjectDraft] = useState('');
+  const [gradeDraft, setGradeDraft] = useState({ standard: '', section: '' });
+  const [editScheduleValues, setEditScheduleValues] = useState({
+    subject: '',
+    className: '',
+    teacherId: ''
+  });
   const [newSchedule, setNewSchedule] = useState({
     teacherId: '',
     day: '',
@@ -39,6 +51,11 @@ const AdminDashboard = ({ user, token, onLogout, exhibitionMode, darkMode, setDa
     password: '',
     name: ''
   });
+  const gradesByStandard = gradeCatalog.reduce((groups, option) => {
+    if (!groups[option.standard]) groups[option.standard] = [];
+    groups[option.standard].push(option);
+    return groups;
+  }, {});
 
   useEffect(() => {
     fetchData();
@@ -46,23 +63,93 @@ const AdminDashboard = ({ user, token, onLogout, exhibitionMode, darkMode, setDa
 
   const fetchData = async () => {
     try {
-      const [teachersRes, schedulesRes, settingsRes] = await Promise.all([
+      const [teachersRes, schedulesRes, settingsRes, catalogRes] = await Promise.all([
         axios.get(`${API}/users`, {
           headers: { Authorization: `Bearer ${token}` }
         }),
         axios.get(`${API}/schedules`, {
           headers: { Authorization: `Bearer ${token}` }
         }),
-        axios.get(`${API}/settings/break-period`)
+        axios.get(`${API}/settings/break-period`),
+        axios.get(`${API}/catalog`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
       ]);
 
       setTeachers(teachersRes.data.filter(u => u.role === 'teacher'));
       setSchedules(schedulesRes.data);
       setBreakAfter(settingsRes.data.break_after_period);
+      setSubjectCatalog(catalogRes.data.subjects);
+      setGradeCatalog(catalogRes.data.grades);
     } catch (error) {
       toast.error('Failed to load data');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAddCatalogSubject = async (event) => {
+    event.preventDefault();
+    try {
+      const response = await axios.post(
+        `${API}/catalog/subjects`,
+        { name: subjectDraft },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setSubjectCatalog(current => [
+        ...current.filter(option => option.id !== response.data.id),
+        response.data
+      ].sort((first, second) => first.name.localeCompare(second.name)));
+      setSubjectDraft('');
+      toast.success('Subject added to the catalog');
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to add subject');
+    }
+  };
+
+  const handleDeleteCatalogSubject = async (option) => {
+    try {
+      await axios.delete(`${API}/catalog/subjects/${option.id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setSubjectCatalog(current => current.filter(item => item.id !== option.id));
+      toast.success('Subject removed from the catalog');
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to remove subject');
+    }
+  };
+
+  const handleAddCatalogGrade = async (event) => {
+    event.preventDefault();
+    try {
+      const response = await axios.post(
+        `${API}/catalog/grades`,
+        gradeDraft,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setGradeCatalog(current => [
+        ...current.filter(option => option.id !== response.data.id),
+        response.data
+      ].sort((first, second) => (
+        first.standard.localeCompare(second.standard)
+        || first.section.localeCompare(second.section)
+      )));
+      setGradeDraft({ standard: '', section: '' });
+      toast.success('Grade and section added to the catalog');
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to add grade');
+    }
+  };
+
+  const handleDeleteCatalogGrade = async (option) => {
+    try {
+      await axios.delete(`${API}/catalog/grades/${option.id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setGradeCatalog(current => current.filter(item => item.id !== option.id));
+      toast.success('Grade removed from the catalog');
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to remove grade');
     }
   };
 
@@ -109,15 +196,20 @@ const AdminDashboard = ({ user, token, onLogout, exhibitionMode, darkMode, setDa
 
   const handleScheduleClick = (schedule) => {
     setSelectedSchedule(schedule);
+    setEditScheduleValues({
+      subject: schedule.subject,
+      className: schedule.class_name,
+      teacherId: schedule.teacher_id
+    });
     setShowEditSchedule(true);
   };
 
   const handleUpdateSchedule = async (e) => {
     e.preventDefault();
-    const formData = new FormData(e.target);
     const updateData = {
-      subject: formData.get('subject'),
-      class_name: formData.get('class_name')
+      subject: editScheduleValues.subject.trim(),
+      class_name: editScheduleValues.className.trim(),
+      teacher_id: editScheduleValues.teacherId
     };
 
     try {
@@ -226,7 +318,7 @@ const AdminDashboard = ({ user, token, onLogout, exhibitionMode, darkMode, setDa
   }
 
   return (
-    <div className="dashboard-page">
+    <div className="dashboard-page page-transition">
       {exhibitionMode && (
         <div className="exhibition-badge">Exhibition Mode Active</div>
       )}
@@ -315,6 +407,7 @@ const AdminDashboard = ({ user, token, onLogout, exhibitionMode, darkMode, setDa
                     Select an empty cell to add a lesson, or an existing lesson to edit it.
                   </p>
                   <TimetableGrid
+                    key={selectedTeacher}
                     schedules={schedules.filter(s => s.teacher_id === selectedTeacher)}
                     breakAfter={breakAfter}
                     onCellClick={handleScheduleClick}
@@ -400,6 +493,49 @@ const AdminDashboard = ({ user, token, onLogout, exhibitionMode, darkMode, setDa
                   </div>
                 </div>
 
+                <div className="admin-settings-row flex items-center justify-between p-4 bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700">
+                  <div className="flex items-start gap-3">
+                    <Users className="mt-1 h-5 w-5 shrink-0 text-gray-600 dark:text-gray-300" />
+                    <div>
+                      <Label className="text-base font-medium text-gray-900 dark:text-white">Teacher Accounts</Label>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                        Register a teacher who can sign in and receive a schedule. The account is stored in MongoDB.
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={() => setShowAddTeacher(true)}
+                    data-testid="settings-add-teacher-button"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Register Teacher
+                  </Button>
+                </div>
+
+                <div className="admin-settings-row flex items-center justify-between p-4 bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700">
+                  <div>
+                    <Label className="text-base font-medium text-gray-900 dark:text-white">Subjects</Label>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                      {subjectCatalog.length} available subjects, saved in MongoDB.
+                    </p>
+                  </div>
+                  <Button variant="outline" onClick={() => setShowSubjectCatalog(true)}>
+                    Manage Subjects
+                  </Button>
+                </div>
+
+                <div className="admin-settings-row flex items-center justify-between p-4 bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700">
+                  <div>
+                    <Label className="text-base font-medium text-gray-900 dark:text-white">Grades &amp; Sections</Label>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                      {gradeCatalog.length} available grade and section combinations.
+                    </p>
+                  </div>
+                  <Button variant="outline" onClick={() => setShowGradeCatalog(true)}>
+                    Manage Grades
+                  </Button>
+                </div>
+
                 {/* Demo Data Management */}
                 <div className="p-4 bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700">
                   <Label className="text-base font-medium text-gray-900 dark:text-white">Demo Timetable Management</Label>
@@ -442,16 +578,115 @@ const AdminDashboard = ({ user, token, onLogout, exhibitionMode, darkMode, setDa
         </Tabs>
       </div>
 
+      <Dialog open={showSubjectCatalog} onOpenChange={setShowSubjectCatalog}>
+        <DialogContent className="max-h-[90dvh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Manage Subjects</DialogTitle>
+            <DialogDescription>
+              Add or remove subjects used by the schedule editor. Changes are saved to MongoDB.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleAddCatalogSubject} className="flex gap-2">
+            <Input
+              value={subjectDraft}
+              onChange={event => setSubjectDraft(event.target.value)}
+              placeholder="Subject name"
+              aria-label="New subject name"
+              required
+            />
+            <Button type="submit" disabled={!subjectDraft.trim()}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add
+            </Button>
+          </form>
+          <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
+            {subjectCatalog.map(option => (
+              <div key={option.id} className="flex items-center justify-between gap-3 rounded-lg border p-3">
+                <span className="min-w-0 break-words">{option.name}</span>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  aria-label={`Remove ${option.name}`}
+                  onClick={() => handleDeleteCatalogSubject(option)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+            {subjectCatalog.length === 0 && (
+              <p className="py-4 text-center text-sm text-gray-500">No subjects in the catalog.</p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showGradeCatalog} onOpenChange={setShowGradeCatalog}>
+        <DialogContent className="max-h-[90dvh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Manage Grades &amp; Sections</DialogTitle>
+            <DialogDescription>
+              Add each section under a standard, for example standard XI with section A.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleAddCatalogGrade} className="grid gap-3 sm:grid-cols-[1fr_8rem_auto]">
+            <Input
+              value={gradeDraft.standard}
+              onChange={event => setGradeDraft(current => ({ ...current, standard: event.target.value }))}
+              placeholder="Standard (e.g. XI)"
+              aria-label="Standard"
+              required
+            />
+            <Input
+              value={gradeDraft.section}
+              onChange={event => setGradeDraft(current => ({ ...current, section: event.target.value }))}
+              placeholder="Section"
+              aria-label="Section"
+              required
+            />
+            <Button type="submit" disabled={!gradeDraft.standard.trim() || !gradeDraft.section.trim()}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add
+            </Button>
+          </form>
+          <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
+            {Object.entries(gradesByStandard).sort(([first], [second]) => first.localeCompare(second)).map(([standard, options]) => (
+              <div key={standard} className="rounded-lg border p-3">
+                <p className="mb-2 font-medium">{standard}</p>
+                <div className="flex flex-wrap gap-2">
+                  {options.map(option => (
+                    <div key={option.id} className="flex items-center gap-2 rounded-md bg-gray-100 px-3 py-2 dark:bg-slate-800">
+                      <span className="text-sm">Section {option.section}</span>
+                      <button
+                        type="button"
+                        className="rounded p-1 text-gray-500 hover:bg-gray-200 hover:text-red-600 dark:hover:bg-slate-700"
+                        aria-label={`Remove ${option.name}`}
+                        onClick={() => handleDeleteCatalogGrade(option)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+            {gradeCatalog.length === 0 && (
+              <p className="py-4 text-center text-sm text-gray-500">No grades in the catalog.</p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Add Schedule Dialog */}
       <Dialog open={showAddSchedule} onOpenChange={setShowAddSchedule}>
-        <DialogContent>
+        <DialogContent className="schedule-dialog">
           <DialogHeader>
             <DialogTitle>Add Schedule Entry</DialogTitle>
             <DialogDescription>
               {newSchedule.day}, Period {newSchedule.period}
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleCreateSchedule} className="space-y-4">
+          <form onSubmit={handleCreateSchedule} className="schedule-dialog-form">
             <div className="space-y-2">
               <Label htmlFor="schedule-teacher">Teacher</Label>
               <Select
@@ -471,23 +706,31 @@ const AdminDashboard = ({ user, token, onLogout, exhibitionMode, darkMode, setDa
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="schedule-subject">Subject</Label>
-              <Input
+              <EditableChoiceField
                 id="schedule-subject"
+                label="Subject"
                 value={newSchedule.subject}
-                onChange={(e) => setNewSchedule(current => ({ ...current, subject: e.target.value }))}
-                required
-                data-testid="schedule-subject-input"
+                onChange={(subject) => setNewSchedule(current => ({ ...current, subject }))}
+                options={[...new Set([
+                  ...subjectCatalog.map(option => option.name),
+                  newSchedule.subject
+                ].filter(Boolean))].sort()}
+                placeholder="Type or choose a subject"
+                testId="schedule-subject-input"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="schedule-class">Class</Label>
-              <Input
+              <EditableChoiceField
                 id="schedule-class"
+                label="Class / Grade"
                 value={newSchedule.className}
-                onChange={(e) => setNewSchedule(current => ({ ...current, className: e.target.value }))}
-                required
-                data-testid="schedule-class-input"
+                onChange={(className) => setNewSchedule(current => ({ ...current, className }))}
+                options={[...new Set([
+                  ...gradeCatalog.map(option => option.name),
+                  newSchedule.className
+                ].filter(Boolean))].sort()}
+                placeholder="Type or choose a class or grade"
+                testId="schedule-class-input"
               />
             </div>
             <div className="flex justify-end gap-2">
@@ -555,7 +798,7 @@ const AdminDashboard = ({ user, token, onLogout, exhibitionMode, darkMode, setDa
 
       {/* Edit Schedule Dialog */}
       <Dialog open={showEditSchedule} onOpenChange={setShowEditSchedule}>
-        <DialogContent>
+        <DialogContent className="schedule-dialog">
           <DialogHeader>
             <DialogTitle>Edit Schedule</DialogTitle>
             <DialogDescription>
@@ -563,25 +806,51 @@ const AdminDashboard = ({ user, token, onLogout, exhibitionMode, darkMode, setDa
             </DialogDescription>
           </DialogHeader>
           {selectedSchedule && (
-            <form onSubmit={handleUpdateSchedule} className="space-y-4">
+            <form onSubmit={handleUpdateSchedule} className="schedule-dialog-form">
               <div className="space-y-2">
-                <Label htmlFor="subject">Subject</Label>
-                <Input
+                <Label htmlFor="edit-schedule-teacher">Teacher</Label>
+                <Select
+                  value={editScheduleValues.teacherId}
+                  onValueChange={(teacherId) => setEditScheduleValues(current => ({ ...current, teacherId }))}
+                >
+                  <SelectTrigger id="edit-schedule-teacher" data-testid="edit-schedule-teacher-select">
+                    <SelectValue placeholder="Choose teacher" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {teachers.map(teacher => (
+                      <SelectItem key={teacher.id} value={teacher.id}>
+                        {teacher.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <EditableChoiceField
                   id="subject"
-                  name="subject"
-                  defaultValue={selectedSchedule.subject}
-                  required
-                  data-testid="edit-subject-input"
+                  label="Subject"
+                  value={editScheduleValues.subject}
+                  onChange={(subject) => setEditScheduleValues(current => ({ ...current, subject }))}
+                  options={[...new Set([
+                    ...subjectCatalog.map(option => option.name),
+                    editScheduleValues.subject
+                  ].filter(Boolean))].sort()}
+                  placeholder="Type or choose a subject"
+                  testId="edit-subject-input"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="class_name">Class</Label>
-                <Input
+                <EditableChoiceField
                   id="class_name"
-                  name="class_name"
-                  defaultValue={selectedSchedule.class_name}
-                  required
-                  data-testid="edit-class-input"
+                  label="Class / Grade"
+                  value={editScheduleValues.className}
+                  onChange={(className) => setEditScheduleValues(current => ({ ...current, className }))}
+                  options={[...new Set([
+                    ...gradeCatalog.map(option => option.name),
+                    editScheduleValues.className
+                  ].filter(Boolean))].sort()}
+                  placeholder="Type or choose a class or grade"
+                  testId="edit-class-input"
                 />
               </div>
               <div className="flex justify-between">

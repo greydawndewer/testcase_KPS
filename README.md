@@ -8,6 +8,7 @@ A minimalistic yet impressive web-based scheduling management system designed fo
 ### For Administrators
 - **Complete Schedule Management**: Create, edit, and delete teacher schedules across 5 working days (Monday-Friday) and 8 periods per day
 - **Teacher Account Management**: Add and manage teacher accounts with secure authentication
+- **Schedule Catalog Management**: Manage MongoDB-backed subjects and grade sections, shared by new and existing schedule forms
 - **Break Period Configuration**: Toggle break periods between Period 3 and Period 4 (simulating half-yearly changes)
 - **Conflict Detection**: Automatically prevent double-booking and scheduling conflicts
 - **Real-time Update Tracking**: All schedule changes are logged with timestamps and admin attribution
@@ -110,6 +111,8 @@ MONGO_URL=mongodb+srv://<db-user>:<url-encoded-password>@<cluster-host>/school_s
 URL-encode special characters in the database username or password. Never put this connection string in the frontend environment. Replace the example JWT key before deployment.
 
 You do **not** need to create a schema or collections in Atlas by hand. On its first successful connection, the backend creates the demo users and settings; MongoDB creates the database and collections when the backend writes those records. It creates demo schedules if the schedules collection is empty.
+
+The first backend startup also seeds the subject and grade-section catalog in MongoDB from the demo timetable. Admins can add or remove subjects and grade/section combinations in the dashboard's **Settings** tab; those options are then shared by both schedule creation and editing.
 
 5. MAINNN **Start the backend server:**
 ```bash
@@ -233,19 +236,7 @@ npm run build
 
 ## 👥 Demo Accounts
 
-### Administrator Account
-```
-Username: admin123
-Password: password123
-```
-
-### Teacher Accounts
-```
-Teacher 1: t_admin / pass123 (Admin)
-Teacher 2: t_nadeem / pass123 (Nadeem Sir)
-Teacher 3: t_prinshu / pass123 (Prinshu Sir)
-Teacher 4: t_abhishek / pass123 (Abhishek Sir)
-```
+The login page loads the public demo teacher names and usernames from MongoDB. Passwords are stored as one-way hashes and are not displayed or retrievable; ask the administrator for sign-in credentials. Seeded demo credentials are for local demonstration only and must be changed before production use.
 
 ## 🎭 Exhibition Mode
 
@@ -371,6 +362,11 @@ Toggle exhibition mode from the homepage to showcase the system with:
 - `POST /api/schedules` - Create schedule (Admin)
 - `PUT /api/schedules/{schedule_id}` - Update schedule (Admin)
 - `DELETE /api/schedules/{schedule_id}` - Delete schedule (Admin)
+
+### Schedule Catalog (Admin only)
+- `GET /api/catalog` - List saved subjects and grade/section combinations
+- `POST /api/catalog/subjects` and `DELETE /api/catalog/subjects/{option_id}` - Manage subjects
+- `POST /api/catalog/grades` and `DELETE /api/catalog/grades/{option_id}` - Manage grade sections
 
 ### Settings
 - `GET /api/settings/break-period` - Get break config

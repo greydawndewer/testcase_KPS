@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Button } from '../components/ui/button';
@@ -17,6 +17,26 @@ const LoginPage = ({ onLogin, darkMode }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [demoTeachers, setDemoTeachers] = useState([]);
+  const [demoTeachersError, setDemoTeachersError] = useState('');
+
+  useEffect(() => {
+    let active = true;
+
+    axios.get(`${API}/auth/demo-teachers`)
+      .then(({ data }) => {
+        if (active) setDemoTeachers(data);
+      })
+      .catch(() => {
+        if (active) {
+          setDemoTeachersError('Demo account details are temporarily unavailable.');
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -56,7 +76,7 @@ const LoginPage = ({ onLogin, darkMode }) => {
   };
 
   return (
-    <div className="login-page flex items-center justify-center relative overflow-hidden">
+    <div className="login-page page-transition flex items-center justify-center relative overflow-hidden">
       {/* Background decorative elements */}
       <div className="absolute top-0 left-0 w-96 h-96 bg-blue-200 dark:bg-blue-900 rounded-full filter blur-3xl opacity-20 -translate-x-1/2 -translate-y-1/2"></div>
       <div className="absolute bottom-0 right-0 w-96 h-96 bg-purple-200 dark:bg-purple-900 rounded-full filter blur-3xl opacity-20 translate-x-1/2 translate-y-1/2"></div>
@@ -133,26 +153,45 @@ const LoginPage = ({ onLogin, darkMode }) => {
             </Button>
           </form>
 
-          {/* Demo accounts */}
-          <div className="pt-4 border-t border-gray-200 dark:border-slate-700">
-            <p className="text-xs text-gray-500 dark:text-gray-500 text-center mb-3">Demo Accounts</p>
-            <div className="space-y-2 text-xs">
-              <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
-                <p className="font-semibold text-blue-900 dark:text-blue-300">Admin</p>
-                <p className="text-gray-600 dark:text-gray-400">admin123 / password123</p>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div className="bg-gray-50 dark:bg-slate-800 p-2 rounded-lg">
-                  <p className="font-semibold text-gray-700 dark:text-gray-300 text-xs">Abhishek Sir</p>
-                  <p className="text-gray-500 dark:text-gray-500 text-xs">t_abhishek / pass123</p>
-                </div>
-                <div className="bg-gray-50 dark:bg-slate-800 p-2 rounded-lg">
-                  <p className="font-semibold text-gray-700 dark:text-gray-300 text-xs">Nadeem Sir</p>
-                  <p className="text-gray-500 dark:text-gray-500 text-xs">t_nadeem / pass123</p>
-                </div>
-              </div>
+          <section className="demo-account-panel" aria-labelledby="demo-account-heading">
+            <div className="mb-3 text-center">
+              <h3 id="demo-account-heading" className="text-sm font-semibold text-gray-900 dark:text-white">
+                Demo teacher accounts
+              </h3>
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                Usernames are loaded from the database. Ask the administrator for a password.
+              </p>
             </div>
-          </div>
+            {demoTeachersError ? (
+              <p className="demo-account-message" role="status">{demoTeachersError}</p>
+            ) : demoTeachers.length > 0 ? (
+              <div className="space-y-2">
+                {demoTeachers.map((teacher) => (
+                  <button
+                    className="demo-account"
+                    key={teacher.username}
+                    onClick={() => setUsername(teacher.username)}
+                    type="button"
+                    aria-label={`Use username ${teacher.username}`}
+                  >
+                    <span className="demo-account-role">{teacher.name}</span>
+                    <span>
+                      <strong>Username</strong>
+                      <code>{teacher.username}</code>
+                    </span>
+                    <span>
+                      <strong>Password</strong>
+                      <code>Not displayed</code>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="demo-account-message" role="status">
+                Loading demo teacher accounts…
+              </p>
+            )}
+          </section>
         </div>
       </div>
     </div>

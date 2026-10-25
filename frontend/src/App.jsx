@@ -1,13 +1,15 @@
-import { useState, useEffect } from 'react';
+import { lazy, Suspense, useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import HomePage from './pages/HomePage';
-import LoginPage from './pages/LoginPage';
-import AdminDashboard from './pages/AdminDashboard';
-import TeacherDashboard from './pages/TeacherDashboard';
 import { Toaster } from './components/ui/sonner';
 import BackendStatusNotice from './components/BackendStatusNotice';
+import CursorGlow from './components/CursorGlow';
 import './lib/backendRequestMonitor';
 import '@/App.css';
+
+const HomePage = lazy(() => import('./pages/HomePage'));
+const LoginPage = lazy(() => import('./pages/LoginPage'));
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
+const TeacherDashboard = lazy(() => import('./pages/TeacherDashboard'));
 
 const readStoredSession = () => {
   const token = localStorage.getItem('token');
@@ -71,63 +73,66 @@ function App() {
     <div className="App">
       <BrowserRouter>
         <main className="app-main">
-          <Routes>
-            <Route
-              path="/"
-              element={
-                <HomePage
-                  exhibitionMode={exhibitionMode}
-                  setExhibitionMode={setExhibitionMode}
-                  darkMode={darkMode}
-                  setDarkMode={setDarkMode}
-                  isAuthenticated={!!token}
-                  user={user}
-                />
-              }
-            />
-            <Route
-              path="/login"
-              element={
-                token ? <Navigate to={user?.role === 'admin' ? '/admin' : '/dashboard'} replace /> :
-                <LoginPage onLogin={handleLogin} darkMode={darkMode} />
-              }
-            />
-            <Route
-              path="/admin"
-              element={
-                <ProtectedRoute requiredRole="admin">
-                  <AdminDashboard
-                    user={user}
-                    token={token}
-                    onLogout={handleLogout}
+          <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="spinner" /></div>}>
+            <Routes>
+              <Route
+                path="/"
+                element={
+                  <HomePage
                     exhibitionMode={exhibitionMode}
+                    setExhibitionMode={setExhibitionMode}
                     darkMode={darkMode}
                     setDarkMode={setDarkMode}
-                  />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/dashboard"
-              element={
-                <ProtectedRoute requiredRole="teacher">
-                  <TeacherDashboard
+                    isAuthenticated={!!token}
                     user={user}
-                    token={token}
-                    onLogout={handleLogout}
-                    exhibitionMode={exhibitionMode}
-                    darkMode={darkMode}
-                    setDarkMode={setDarkMode}
                   />
-                </ProtectedRoute>
-              }
-            />
-          </Routes>
+                }
+              />
+              <Route
+                path="/login"
+                element={
+                  token ? <Navigate to={user?.role === 'admin' ? '/admin' : '/dashboard'} replace /> :
+                  <LoginPage onLogin={handleLogin} darkMode={darkMode} />
+                }
+              />
+              <Route
+                path="/admin"
+                element={
+                  <ProtectedRoute requiredRole="admin">
+                    <AdminDashboard
+                      user={user}
+                      token={token}
+                      onLogout={handleLogout}
+                      exhibitionMode={exhibitionMode}
+                      darkMode={darkMode}
+                      setDarkMode={setDarkMode}
+                    />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/dashboard"
+                element={
+                  <ProtectedRoute requiredRole="teacher">
+                    <TeacherDashboard
+                      user={user}
+                      token={token}
+                      onLogout={handleLogout}
+                      exhibitionMode={exhibitionMode}
+                      darkMode={darkMode}
+                      setDarkMode={setDarkMode}
+                    />
+                  </ProtectedRoute>
+                }
+              />
+            </Routes>
+          </Suspense>
         </main>
       </BrowserRouter>
       <footer className="app-footer">@KPSKADMA</footer>
       <Toaster position="top-right" richColors />
       <BackendStatusNotice />
+      <CursorGlow />
     </div>
   );
 }
