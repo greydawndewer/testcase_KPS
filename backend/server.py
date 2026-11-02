@@ -181,6 +181,18 @@ def _grade_name(standard: str, section: str) -> str:
     return f"{standard}-{section}"
 
 
+def _schedule_summary(subject: str, class_name: str, teacher_name: str) -> str:
+    return " · ".join(
+        f"{label}: {value}"
+        for label, value in (
+            ("Subject", subject),
+            ("Class", class_name),
+            ("Teacher", teacher_name),
+        )
+        if value
+    )
+
+
 async def _save_subject_option(name: str) -> dict:
     normalized_name = name.strip()
     option_id = _catalog_id(normalized_name)
@@ -257,6 +269,7 @@ class ChangeLog(BaseModel):
     old_value: str
     new_value: str
     changed_by: str
+    action: str = "updated"
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
@@ -1111,6 +1124,22 @@ async def create_schedule(
     schedule_doc["updated_at"] = schedule_doc["updated_at"].isoformat()
 
     await db.schedules.insert_one(schedule_doc)
+    changelog = ChangeLog(
+        schedule_id=schedule.id,
+        teacher_id=schedule.teacher_id,
+        teacher_name=schedule.teacher_name,
+        day=schedule.day,
+        period=schedule.period,
+        old_value="No lesson",
+        new_value=_schedule_summary(
+            schedule.subject, schedule.class_name, schedule.teacher_name
+        ),
+        changed_by=current_user.name,
+        action="added",
+    )
+    changelog_doc = changelog.model_dump()
+    changelog_doc["timestamp"] = changelog_doc["timestamp"].isoformat()
+    await db.changelogs.insert_one(changelog_doc)
     await _save_schedule_catalog_values(schedule_data.subject, schedule_data.class_name)
     return schedule
 
@@ -1179,34 +1208,46 @@ async def update_schedule(
             f"Teacher: {existing.get('teacher_name')} → {update_dict['teacher_name']}"
         )
 
+    changelog_docs = []
     if changes:
         new_teacher_id = update_dict.get("teacher_id", existing["teacher_id"])
         new_teacher_name = update_dict.get("teacher_name", existing["teacher_name"])
-        changelog = ChangeLog(
-            schedule_id=schedule_id,
-            teacher_id=new_teacher_id,
-            teacher_name=new_teacher_name,
-            day=existing["day"],
-            period=existing["period"],
-            old_value=existing.get("subject", "")
-            + " - "
-            + existing.get("class_name", "")
-            + " - "
-            + existing.get("teacher_name", ""),
-            new_value=update_dict.get("subject", existing.get("subject", ""))
-            + " - "
-            + update_dict.get("class_name", existing.get("class_name", ""))
-            + " - "
-            + new_teacher_name,
-            changed_by=current_user.name,
+        old_value = _schedule_summary(
+            existing.get("subject", ""),
+            existing.get("class_name", ""),
+            existing.get("teacher_name", ""),
         )
-        changelog_doc = changelog.model_dump()
-        changelog_doc["timestamp"] = changelog_doc["timestamp"].isoformat()
-        await db.changelogs.insert_one(changelog_doc)
+        new_value = _schedule_summary(
+            update_dict.get("subject", existing.get("subject", "")),
+            update_dict.get("class_name", existing.get("class_name", "")),
+            new_teacher_name,
+        )
+        change_targets = [
+            (new_teacher_id, new_teacher_name),
+        ]
+        if new_teacher_id != existing["teacher_id"]:
+            change_targets.insert(0, (existing["teacher_id"], existing["teacher_name"]))
+
+        for teacher_id, teacher_name in change_targets:
+            changelog = ChangeLog(
+                schedule_id=schedule_id,
+                teacher_id=teacher_id,
+                teacher_name=teacher_name,
+                day=existing["day"],
+                period=existing["period"],
+                old_value=old_value,
+                new_value=new_value,
+                changed_by=current_user.name,
+            )
+            changelog_doc = changelog.model_dump()
+            changelog_doc["timestamp"] = changelog_doc["timestamp"].isoformat()
+            changelog_docs.append(changelog_doc)
 
     if update_dict:
         update_dict["updated_at"] = datetime.now(timezone.utc).isoformat()
         await db.schedules.update_one({"id": schedule_id}, {"$set": update_dict})
+        for changelog_doc in changelog_docs:
+            await db.changelogs.insert_one(changelog_doc)
         await _save_schedule_catalog_values(
             subject=update_dict.get("subject"),
             class_name=update_dict.get("class_name"),
@@ -1231,9 +1272,32 @@ async def delete_schedule(
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Admin access required")
 
+    schedule = await db.schedules.find_one({"id": schedule_id}, {"_id": 0})
+    if not schedule:
+        raise HTTPException(status_code=404, detail="Schedule not found")
+
     result = await db.schedules.delete_one({"id": schedule_id})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Schedule not found")
+
+    changelog = ChangeLog(
+        schedule_id=schedule_id,
+        teacher_id=schedule["teacher_id"],
+        teacher_name=schedule["teacher_name"],
+        day=schedule["day"],
+        period=schedule["period"],
+        old_value=_schedule_summary(
+            schedule.get("subject", ""),
+            schedule.get("class_name", ""),
+            schedule.get("teacher_name", ""),
+        ),
+        new_value="No lesson",
+        changed_by=current_user.name,
+        action="removed",
+    )
+    changelog_doc = changelog.model_dump()
+    changelog_doc["timestamp"] = changelog_doc["timestamp"].isoformat()
+    await db.changelogs.insert_one(changelog_doc)
 
     return {"message": "Schedule deleted successfully"}
 

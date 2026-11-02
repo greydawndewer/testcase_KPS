@@ -126,7 +126,110 @@ def test_admin_can_reassign_schedule_to_another_teacher():
     assert response.teacher_id == "teacher-2"
     assert response.teacher_name == "Teacher Two"
     schedules.update_one.assert_awaited_once()
-    changelogs.insert_one.assert_awaited_once()
+    assert changelogs.insert_one.await_count == 2
+    change_targets = [
+        call.args[0]["teacher_id"] for call in changelogs.insert_one.await_args_list
+    ]
+    assert change_targets == ["teacher-1", "teacher-2"]
+
+
+def test_teacher_changelogs_are_scoped_to_the_authenticated_teacher():
+    cursor = SimpleNamespace(
+        sort=Mock(return_value=None),
+        to_list=AsyncMock(return_value=[]),
+    )
+    cursor.sort.return_value = cursor
+    changelogs = SimpleNamespace(find=Mock(return_value=cursor))
+    teacher = server.User(
+        id="teacher-1",
+        username="teacher",
+        name="Teacher",
+        role="teacher",
+    )
+
+    with patch.object(server, "db", SimpleNamespace(changelogs=changelogs)):
+        response = asyncio.run(server.get_changelogs(current_user=teacher))
+
+    assert response == []
+    changelogs.find.assert_called_once_with({"teacher_id": "teacher-1"}, {"_id": 0})
+
+
+def test_admin_schedule_creation_writes_a_teacher_specific_update():
+    schedules = SimpleNamespace(
+        find_one=AsyncMock(return_value=None),
+        insert_one=AsyncMock(),
+    )
+    changelogs = SimpleNamespace(insert_one=AsyncMock())
+    admin = server.User(
+        id="admin-1",
+        username="admin",
+        name="Administrator",
+        role="admin",
+    )
+    schedule_data = server.ScheduleCreate(
+        teacher_id="teacher-1",
+        teacher_name="Teacher One",
+        day="Monday",
+        period=2,
+        subject="Physics",
+        class_name="XI-A",
+    )
+
+    with patch.object(
+        server,
+        "db",
+        SimpleNamespace(schedules=schedules, changelogs=changelogs),
+    ), patch.object(server, "_save_schedule_catalog_values", new=AsyncMock()):
+        schedule = asyncio.run(server.create_schedule(schedule_data, admin))
+
+    changelog = changelogs.insert_one.await_args.args[0]
+    assert changelog["teacher_id"] == "teacher-1"
+    assert changelog["action"] == "added"
+    assert changelog["old_value"] == "No lesson"
+    assert (
+        changelog["new_value"]
+        == "Subject: Physics · Class: XI-A · Teacher: Teacher One"
+    )
+    assert changelog["schedule_id"] == schedule.id
+
+
+def test_admin_schedule_deletion_writes_a_teacher_specific_update():
+    existing = {
+        "id": "schedule-1",
+        "teacher_id": "teacher-1",
+        "teacher_name": "Teacher One",
+        "day": "Monday",
+        "period": 2,
+        "subject": "Physics",
+        "class_name": "XI-A",
+    }
+    schedules = SimpleNamespace(
+        find_one=AsyncMock(return_value=existing),
+        delete_one=AsyncMock(return_value=SimpleNamespace(deleted_count=1)),
+    )
+    changelogs = SimpleNamespace(insert_one=AsyncMock())
+    admin = server.User(
+        id="admin-1",
+        username="admin",
+        name="Administrator",
+        role="admin",
+    )
+
+    with patch.object(
+        server,
+        "db",
+        SimpleNamespace(schedules=schedules, changelogs=changelogs),
+    ):
+        asyncio.run(server.delete_schedule("schedule-1", admin))
+
+    changelog = changelogs.insert_one.await_args.args[0]
+    assert changelog["teacher_id"] == "teacher-1"
+    assert changelog["action"] == "removed"
+    assert (
+        changelog["old_value"]
+        == "Subject: Physics · Class: XI-A · Teacher: Teacher One"
+    )
+    assert changelog["new_value"] == "No lesson"
 
 
 def test_schedule_values_are_saved_as_subject_and_grade_options():

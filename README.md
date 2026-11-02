@@ -17,7 +17,8 @@ A minimalistic yet impressive web-based scheduling management system designed fo
 - **Personalized Timetable View**: Clean, organized display of weekly schedule
 - **Change Notifications**: Orange-highlighted cells indicate schedule modifications within the last 24 hours
 - **Change Log Panel**: View detailed history of recent schedule updates
-- **Manual Refresh**: Refresh button to check for latest updates (simulates real-time in exhibition demo)
+- **Teacher-specific schedule updates**: Update time and change history are tied to administrator changes for the signed-in teacher, not to manual refreshes
+- **Manual Refresh**: Teachers can check their schedule and update history on demand
 - **Dark Mode Support**: Toggle between light and dark themes
 
 ### Exhibition Features
@@ -283,9 +284,10 @@ Toggle exhibition mode from the homepage to showcase the system with:
 - Automatically displayed in timetable grid
 
 ### Change Tracking
-- Every schedule edit creates a changelog entry
+- Added, edited, and removed lessons create teacher-specific changelog entries
 - Teachers see orange highlights for 24 hours
-- Detailed change log shows old vs new values
+- The update panel shows the weekday/period and full before-and-after lesson details
+- Reassigned lessons appear in both the previous and new teacher's update history
 - Tracks which admin made the change
 
 ### Conflict Detection
