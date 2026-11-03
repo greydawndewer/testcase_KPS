@@ -8,16 +8,23 @@ A minimalistic yet impressive web-based scheduling management system designed fo
 ### For Administrators
 - **Complete Schedule Management**: Create, edit, and delete teacher schedules across 5 working days (Monday-Friday) and 8 periods per day
 - **Teacher Account Management**: Add and manage teacher accounts with secure authentication
+- **Teacher Profiles**: Customize each teacher's photo, designation, school dates, contact information, and biography
 - **Schedule Catalog Management**: Manage MongoDB-backed subjects and grade sections, shared by new and existing schedule forms
-- **Break Period Configuration**: Toggle break periods between Period 3 and Period 4 (simulating half-yearly changes)
+- **Bell Schedule Configuration**: Set start, dismissal, break duration and break placement; the eight-period baseline is derived and invalid timing combinations are rejected
+- **Teacher Announcements**: Publish shared Markdown and LaTeX announcements that teachers can open from their profile shutter
+- **Holiday Management**: Add a one-time weekday holiday for the current school week; holidays appear in every timetable and expire automatically
 - **Conflict Detection**: Automatically prevent double-booking and scheduling conflicts
 - **Real-time Update Tracking**: All schedule changes are logged with timestamps and admin attribution
 
 ### For Teachers
 - **Personalized Timetable View**: Clean, organized display of weekly schedule
-- **Change Notifications**: Orange-highlighted cells indicate schedule modifications within the last 24 hours
+- **Change Notifications**: Red-highlighted cells show schedule/timing changes while their matching update is still listed
 - **Change Log Panel**: View detailed history of recent schedule updates
 - **Teacher-specific schedule updates**: Update time and change history are tied to administrator changes for the signed-in teacher, not to manual refreshes
+- **Update History**: Dismiss individual updates or clear them all; updates are cleared on dashboard reopen, manual update refresh, or logout
+- **Period Details and Notes**: Open a filled period to view its complete subject, grade and time, and add a teacher-owned note after confirmation
+- **Profile Shutter**: Pull up the bottom drawer to view the signed-in teacher's profile and school dates
+- **Remembered Login**: A successful login is restored after refreshing or reopening the page; logging out clears it
 - **Manual Refresh**: Teachers can check their schedule and update history on demand
 - **Dark Mode Support**: Toggle between light and dark themes
 
@@ -255,14 +262,21 @@ Toggle exhibition mode from the homepage to showcase the system with:
 4. Click empty cells to add schedule entries
 5. Click existing entries to edit or delete
 6. Switch to "Teachers" tab to manage accounts
-7. Adjust break period in "Settings" tab
+7. Edit teacher profiles or configure a teacher-specific start and dismissal
+8. Configure the default school-day timing, break placement/duration and timezone in Settings
+9. Publish announcements from the Teachers tab
+10. Manage one-time holidays in Settings
+11. Select a teacher on the Schedules tab and pull up the profile shutter to preview their saved profile and announcements
 
 ### Teacher Workflow
 1. Login with teacher credentials
 2. View personalized timetable automatically
-3. Orange highlights show recent changes
+3. Red highlights show changes whose corresponding update has not been dismissed
 4. Check change log panel for details
-5. Use refresh button to get latest updates
+5. Use "Check for updates" or reopen the page to fetch the latest schedule and history
+6. Open a filled period for the full lesson details and optionally save a note
+7. Dismiss individual updates or clear all updates; updates are also cleared when the dashboard is reopened, refreshed manually, or logged out
+8. Pull up the profile shutter to view your saved teacher profile and published announcements
 
 ## 🎯 Exhibition Presentation Strategy
 
@@ -271,24 +285,34 @@ Toggle exhibition mode from the homepage to showcase the system with:
 2. Login as admin, add a schedule entry
 3. In another window, login as teacher
 4. Refresh teacher view to show the change
-5. Demonstrate orange highlight and change log
+5. Demonstrate the red change highlight and teacher-specific change log
 6. Show break period configuration
 7. Display QR code demo modal
 
 ## 📝 Key Features Explained
 
 ### Break Period System
-- Can be positioned after Period 3 or Period 4
-- Admin can toggle this in Settings tab
-- Simulates half-yearly schedule adjustments
-- Automatically displayed in timetable grid
+- The break can be positioned after Period 3 or Period 4; its duration is configurable from 5 to 120 minutes in five-minute increments
+- Administrators set start, dismissal, break position, break duration and school IANA timezone. Start and dismissal use five-minute increments.
+- The eight equal period lengths are calculated from start, dismissal and break. The calculated baseline is read-only and combinations that cannot fit eight periods of 20–60 minutes are rejected without changing the configured break.
+- Per-teacher schedules can override the start and dismissal while retaining the school break; period length is calculated and validated the same way
+- Day-specific temporal shifts are not supported
+
+### Holidays and Period Notes
+- Administrators can add, edit and remove a holiday for an upcoming/current weekday in the school week
+- Holiday dates expire automatically; the timetable names the holiday and marks its periods as dismissed
+- Teachers can open a filled period to see the full subject, grade/section and effective time, and can edit their own note after confirming
 
 ### Change Tracking
 - Added, edited, and removed lessons create teacher-specific changelog entries
-- Teachers see orange highlights for 24 hours
+- Teachers see red highlights while the matching update remains in their changelog
 - The update panel shows the weekday/period and full before-and-after lesson details
 - Reassigned lessons appear in both the previous and new teacher's update history
+- Announcements are shared with all teachers, support Markdown plus inline/display LaTeX math, and expire after seven days
+- Admins can preview announcements before publishing and remove the newest requested number from the Teachers tab
 - Tracks which admin made the change
+- Updates can be dismissed individually or cleared together; the list clears on dashboard reopening, manual update refresh, and logout
+- The last-update display reflects schedule edits, not manual refresh requests
 
 ### Conflict Detection
 - Prevents double-booking of classrooms
@@ -356,7 +380,9 @@ Toggle exhibition mode from the homepage to showcase the system with:
 
 ### Users (Admin only)
 - `GET /api/users` - List all users
+- `GET /api/users/me` - Get the signed-in account profile
 - `POST /api/users` - Create new user
+- `PUT /api/users/{user_id}/profile` - Update a teacher's profile
 - `DELETE /api/users/{user_id}` - Delete user
 
 ### Schedules
@@ -369,13 +395,22 @@ Toggle exhibition mode from the homepage to showcase the system with:
 - `GET /api/catalog` - List saved subjects and grade/section combinations
 - `POST /api/catalog/subjects` and `DELETE /api/catalog/subjects/{option_id}` - Manage subjects
 - `POST /api/catalog/grades` and `DELETE /api/catalog/grades/{option_id}` - Manage grade sections
+- `GET /api/announcements`, `POST /api/announcements`, and `DELETE /api/announcements/{announcement_id}` - Read, publish, or remove individual announcements
+- `DELETE /api/announcements?count=N` - Remove up to the latest N announcements (Admin; N is 1-500)
 
 ### Settings
-- `GET /api/settings/break-period` - Get break config
-- `PUT /api/settings/break-period` - Update break position (Admin)
+- `GET /api/settings/bell-schedule` - Get effective bell schedule (optionally for an admin-selected teacher)
+- `PUT /api/settings/bell-schedule` - Atomically update and validate the default bell schedule (Admin)
+- `PUT /api/users/{user_id}/bell-schedule` and `DELETE /api/users/{user_id}/bell-schedule` - Set or reset a teacher's complete time override (Admin)
+- `GET/POST /api/holidays` and `PUT/DELETE /api/holidays/{holiday_id}` - Manage current-week one-time holidays (Admin)
+- `PUT /api/schedules/{schedule_id}/note` - Save a note for the assigned teacher's lesson
+- `GET /api/settings/break-period` - Get legacy break settings
+- `PUT /api/settings/break-period` - Update break position (Admin; rejects changes that conflict with configured schedules)
 
 ### Changelogs
 - `GET /api/changelogs` - Get change history
+- `DELETE /api/changelogs/{log_id}` - Dismiss one update (teachers can only dismiss their own)
+- `DELETE /api/changelogs` - Clear a teacher's update history
 
 ## 🙏 Credits
 

@@ -7,8 +7,11 @@ import { Label } from '../components/ui/label';
 import { toast } from 'sonner';
 import { LogIn, ArrowLeft } from 'lucide-react';
 
-const BACKEND_URL = (
+/*const BACKEND_URL = (
   import.meta.env.REACT_APP_BACKEND_URL || "http://127.0.0.1:8000"
+).replace(/\/+$/, "");*/
+const BACKEND_URL = (
+  "http://127.0.0.1:8000"
 ).replace(/\/+$/, "");
 const API = `${BACKEND_URL}/api`;
 

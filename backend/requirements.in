@@ -8,4 +8,5 @@ pymongo
 pytest
 python-dotenv
 pyjwt
+tzdata
 uvicorn[standard]
