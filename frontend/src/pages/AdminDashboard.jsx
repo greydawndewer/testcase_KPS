@@ -17,7 +17,7 @@ import ProfileShutter from '../components/ProfileShutter';
 import { periodDurationForFixedBreak } from '../lib/bellScheduleTiming';
 
 //import.meta.env.REACT_APP_BACKEND_URL || "http://127.0.0.1:8000";
-const BACKEND_URL = "http://127.0.0.1:8000";
+const BACKEND_URL = import.meta.env.REACT_APP_BACKEND_URL || "http://127.0.0.1:8000";
 const API = `${BACKEND_URL}/api`;
 const AnnouncementContent = lazy(() => import('../components/AnnouncementContent'));
 const mapBellSchedule = (data) => ({

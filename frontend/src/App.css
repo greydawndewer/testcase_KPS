@@ -9,7 +9,7 @@ body {
   font-family: 'Inter', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: linear-gradient(135deg, #f5f7fa 0%, #e8eef5 100%);
+  background: #f8f8f7;
 }
 
 .App {
@@ -18,58 +18,110 @@ body {
   background: transparent;
 }
 
-.App::before,
-.App::after {
+.ambient-wave-background {
   position: fixed;
-  z-index: -1;
-  inset: -18%;
-  content: "";
+  z-index: 0;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   pointer-events: none;
-  background-repeat: no-repeat;
-  will-change: transform;
+  overflow: hidden;
+  --wave-start: #b7aaa0;
+  --wave-middle: #8d9297;
+  --wave-end: #c5b8aa;
 }
 
-.App::before {
-  background-image:
-    radial-gradient(ellipse at 18% 28%, rgba(161, 161, 170, 0.26), transparent 42%),
-    radial-gradient(ellipse at 82% 35%, rgba(212, 212, 216, 0.42), transparent 38%),
-    radial-gradient(ellipse at 58% 88%, rgba(148, 163, 184, 0.22), transparent 44%);
-  animation: ambient-wave-one 34s ease-in-out infinite alternate;
+.ambient-wave-stop-start {
+  stop-color: var(--wave-start);
 }
 
-.App::after {
-  opacity: 0.5;
-  background-image:
-    radial-gradient(ellipse at 72% 72%, rgba(113, 113, 122, 0.17), transparent 34%),
-    radial-gradient(ellipse at 28% 78%, rgba(203, 213, 225, 0.34), transparent 40%);
-  animation: ambient-wave-two 46s ease-in-out infinite alternate;
+.ambient-wave-stop-middle {
+  stop-color: var(--wave-middle);
 }
 
-@keyframes ambient-wave-one {
-  from { transform: translate3d(-1.5%, -1%, 0) scale(1); }
-  to { transform: translate3d(1.5%, 1%, 0) scale(1.035); }
+.ambient-wave-stop-end {
+  stop-color: var(--wave-end);
 }
 
-@keyframes ambient-wave-two {
-  from { transform: translate3d(1%, -1.5%, 0) scale(1.03); }
-  to { transform: translate3d(-1%, 1.5%, 0) scale(1); }
+.ambient-wave-background path {
+  fill: none;
+}
+
+.ambient-wave-lines,
+.ambient-wave-shadow,
+.ambient-wave-highlight {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.ambient-wave-lines {
+  stroke: url(#ambient-wave-gradient);
+  stroke-width: 5;
+  opacity: 0.2;
+  animation: ambient-wave-drift 32s ease-in-out infinite alternate;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.ambient-wave-shadow {
+  fill: none;
+  stroke: #5f554d;
+  stroke-width: 12;
+  stroke-linecap: round;
+  opacity: 0.035;
+}
+
+.ambient-wave-highlight {
+  fill: none;
+  stroke: #ffffff;
+  stroke-width: 2;
+  stroke-linecap: round;
+  opacity: 0.3;
+  animation: ambient-wave-highlight-drift 38s ease-in-out infinite alternate;
 }
 
 .dark body {
-  background: linear-gradient(135deg, #1a1a2e 0%, #0f0f1e 100%);
+  background: #09090b;
 }
 
-.dark .App::before {
-  background-image:
-    radial-gradient(ellipse at 18% 28%, rgba(82, 82, 91, 0.34), transparent 42%),
-    radial-gradient(ellipse at 82% 35%, rgba(63, 63, 70, 0.42), transparent 38%),
-    radial-gradient(ellipse at 58% 88%, rgba(51, 65, 85, 0.28), transparent 44%);
+.dark .ambient-wave-background {
+  --wave-start: #e4e4e7;
+  --wave-middle: #9ca3af;
+  --wave-end: #d4d4d8;
 }
 
-.dark .App::after {
-  background-image:
-    radial-gradient(ellipse at 72% 72%, rgba(113, 113, 122, 0.2), transparent 34%),
-    radial-gradient(ellipse at 28% 78%, rgba(71, 85, 105, 0.34), transparent 40%);
+.dark .ambient-wave-shadow {
+  stroke: #000000;
+  opacity: 0.22;
+}
+
+.dark .ambient-wave-highlight {
+  stroke: #ffffff;
+  opacity: 0.18;
+}
+
+@keyframes ambient-wave-drift {
+  from { transform: translate3d(-1.2%, -0.8%, 0) scale(1.015); }
+  to { transform: translate3d(1.2%, 0.8%, 0) scale(1.04); }
+}
+
+@keyframes ambient-wave-highlight-drift {
+  from { transform: translate3d(1%, 0.8%, 0) scale(1.02); }
+  to { transform: translate3d(-1%, -0.8%, 0) scale(1.045); }
+}
+
+.app-main,
+.app-footer {
+  position: relative;
+  z-index: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ambient-wave-lines,
+  .ambient-wave-highlight {
+    animation: none;
+  }
 }
 
 h1, h2, h3, h4, h5, h6 {

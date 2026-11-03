@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from './components/ui/sonner';
 import BackendStatusNotice from './components/BackendStatusNotice';
 import CursorGlow from './components/CursorGlow';
+import AmbientWaves from './components/AmbientWaves';
 import './lib/backendRequestMonitor';
 import '@/App.css';
 
@@ -71,6 +72,7 @@ function App() {
 
   return (
     <div className="App">
+      <AmbientWaves />
       <BrowserRouter>
         <main className="app-main">
           <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="spinner" /></div>}>
