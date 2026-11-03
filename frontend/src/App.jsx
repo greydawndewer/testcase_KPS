@@ -2,7 +2,6 @@ import { lazy, Suspense, useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from './components/ui/sonner';
 import BackendStatusNotice from './components/BackendStatusNotice';
-import CursorGlow from './components/CursorGlow';
 import AmbientWaves from './components/AmbientWaves';
 import './lib/backendRequestMonitor';
 import '@/App.css';
@@ -134,7 +133,6 @@ function App() {
       <footer className="app-footer">@GD</footer>
       <Toaster position="top-right" richColors />
       <BackendStatusNotice />
-      <CursorGlow />
     </div>
   );
 }

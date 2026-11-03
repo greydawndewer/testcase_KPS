@@ -57,28 +57,36 @@ body {
 
 .ambient-wave-lines {
   stroke: url(#ambient-wave-gradient);
-  stroke-width: 5;
-  opacity: 0.2;
-  animation: ambient-wave-drift 32s ease-in-out infinite alternate;
-  transform-box: fill-box;
+  stroke-width: 6;
+  opacity: 0.28;
+  animation: ambient-wave-flow 18s ease-in-out infinite;
+  transform-box: view-box;
   transform-origin: center;
+  will-change: transform;
 }
 
 .ambient-wave-shadow {
   fill: none;
   stroke: #5f554d;
-  stroke-width: 12;
+  stroke-width: 14;
   stroke-linecap: round;
-  opacity: 0.035;
+  opacity: 0.045;
+  animation: ambient-wave-flow 21s ease-in-out infinite reverse;
+  transform-box: view-box;
+  transform-origin: center;
+  will-change: transform;
 }
 
 .ambient-wave-highlight {
   fill: none;
   stroke: #ffffff;
-  stroke-width: 2;
+  stroke-width: 2.5;
   stroke-linecap: round;
-  opacity: 0.3;
-  animation: ambient-wave-highlight-drift 38s ease-in-out infinite alternate;
+  opacity: 0.42;
+  animation: ambient-wave-highlight-flow 24s ease-in-out infinite;
+  transform-box: view-box;
+  transform-origin: center;
+  will-change: transform;
 }
 
 .dark body {
@@ -101,14 +109,14 @@ body {
   opacity: 0.18;
 }
 
-@keyframes ambient-wave-drift {
-  from { transform: translate3d(-1.2%, -0.8%, 0) scale(1.015); }
-  to { transform: translate3d(1.2%, 0.8%, 0) scale(1.04); }
+@keyframes ambient-wave-flow {
+  0%, 100% { transform: translate3d(-4%, -1.5%, 0) scale(1.04) skewX(-1deg); }
+  50% { transform: translate3d(4%, 1.5%, 0) scale(1.08) skewX(1deg); }
 }
 
-@keyframes ambient-wave-highlight-drift {
-  from { transform: translate3d(1%, 0.8%, 0) scale(1.02); }
-  to { transform: translate3d(-1%, -0.8%, 0) scale(1.045); }
+@keyframes ambient-wave-highlight-flow {
+  0%, 100% { transform: translate3d(4%, 1.5%, 0) scale(1.08) skewX(1deg); }
+  50% { transform: translate3d(-4%, -1.5%, 0) scale(1.04) skewX(-1deg); }
 }
 
 .app-main,
@@ -1421,17 +1429,6 @@ body {
   border-top: 1px solid var(--line);
 }
 
-.cursor-sparks {
-  position: fixed;
-  top: 0;
-  left: 0;
-  z-index: 40;
-  pointer-events: none;
-  width: 240px;
-  height: 240px;
-  will-change: transform;
-}
-
 button,
 [role="tab"],
 [role="combobox"],
@@ -1695,12 +1692,9 @@ a:focus-visible {
     transition-duration: 0.01ms !important;
   }
 
-  .cursor-sparks {
-    display: none;
-  }
-
-  .App::before,
-  .App::after,
+  .ambient-wave-lines,
+  .ambient-wave-shadow,
+  .ambient-wave-highlight,
   .profile-shutter-handle svg {
     animation: none !important;
   }
